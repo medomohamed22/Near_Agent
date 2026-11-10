@@ -1,0 +1,8 @@
+{
+  "name": "carpass-scripts",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "near-api-js": "^5.1.1"
+  }
+}
