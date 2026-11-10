@@ -1,0 +1,43 @@
+name: CI
+on: [push, pull_request]
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  contract:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: contract
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - run: cargo test
+      - run: cargo build --target wasm32-unknown-unknown --release
+
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: No private keys and no mainnet endpoints in the source
+        run: |
+          ! grep -rnE 'ed25519:[1-9A-HJ-NP-Za-km-z]{80,}' --exclude-dir=node_modules --exclude-dir=.git .
+          ! grep -rnE 'rpc\.mainnet|"mainnet"' --exclude-dir=node_modules --exclude-dir=.git --exclude=ci.yml web/app web/lib web/components contract/src scripts

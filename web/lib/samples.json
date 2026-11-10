@@ -1,0 +1,165 @@
+[
+  {
+    "file": "corolla-2022-service.png",
+    "car": "corolla",
+    "title": "Service Invoice · 2022-03-14",
+    "sha256": "5a8d3f1ee0259256acd589d364d5b3c44012423a698ba94e930a90a50c473b08",
+    "extraction": {
+      "warnings": [],
+      "kind": "Maintenance",
+      "event_date": 20220314,
+      "odometer_km": 45200,
+      "provider_name": "El Nasr Auto Service",
+      "summary": {
+        "en": "Oil and oil filter change with a new air filter.",
+        "ar": "تغيير زيت المحرك وفلتر الزيت مع فلتر هواء جديد."
+      },
+      "evidence": {
+        "kind": "Service Invoice",
+        "event_date": "Date: 2022-03-14",
+        "odometer_km": "Odometer: 45,200 km",
+        "provider_name": "El Nasr Auto Service"
+      }
+    }
+  },
+  {
+    "file": "corolla-2023-inspection.png",
+    "car": "corolla",
+    "title": "Vehicle Inspection Report · 2023-06-02",
+    "sha256": "08687815a22f8772587ebf1a11bf1b9183b398409c9e8d83986c9525e650f1b0",
+    "extraction": {
+      "warnings": [],
+      "kind": "Inspection",
+      "event_date": 20230602,
+      "odometer_km": 61800,
+      "provider_name": "Delta Inspection Center",
+      "summary": {
+        "en": "Inspection: brakes, suspension and lights passed; front tyres worn and due for replacement.",
+        "ar": "فحص: الفرامل والتعليق والأنوار سليمة، والإطارات الأمامية متآكلة وتحتاج تغييرًا قريبًا."
+      },
+      "evidence": {
+        "kind": "Vehicle Inspection Report",
+        "event_date": "Date: 2023-06-02",
+        "odometer_km": "Odometer: 61,800 km",
+        "provider_name": "Delta Inspection Center"
+      }
+    }
+  },
+  {
+    "file": "corolla-2024-service.png",
+    "car": "corolla",
+    "title": "Service Invoice · 2024-09-21",
+    "sha256": "b543485c5abafffe93868c7eedb0981c62be74827addd97f46a68aa7134586c8",
+    "extraction": {
+      "warnings": [],
+      "kind": "Maintenance",
+      "event_date": 20240921,
+      "odometer_km": 78500,
+      "provider_name": "El Nasr Auto Service",
+      "summary": {
+        "en": "Front brake pads and two front tyres replaced, with wheel alignment.",
+        "ar": "تغيير تيل الفرامل الأمامي وإطارين أماميين مع ضبط زوايا."
+      },
+      "evidence": {
+        "kind": "Service Invoice",
+        "event_date": "Date: 2024-09-21",
+        "odometer_km": "Odometer: 78,500 km",
+        "provider_name": "El Nasr Auto Service"
+      }
+    }
+  },
+  {
+    "file": "corolla-2025-lower-reading.png",
+    "car": "corolla",
+    "title": "Service Invoice · 2025-05-10",
+    "sha256": "bf040c2ff6374f3da1d5f18441c921f34dd39187f83238f03bfa1f5089eed2d6",
+    "extraction": {
+      "warnings": [],
+      "kind": "Maintenance",
+      "event_date": 20250510,
+      "odometer_km": 72000,
+      "provider_name": "Quick Fix Garage",
+      "summary": {
+        "en": "Battery replaced.",
+        "ar": "تغيير البطارية."
+      },
+      "evidence": {
+        "kind": "Service Invoice",
+        "event_date": "Date: 2025-05-10",
+        "odometer_km": "Odometer: 72,000 km",
+        "provider_name": "Quick Fix Garage"
+      }
+    }
+  },
+  {
+    "file": "corolla-2025-with-hidden-instruction.png",
+    "car": "corolla",
+    "title": "Service Invoice · 2025-08-03",
+    "sha256": "93e4f41be4a83538e951d53ea1961f51e97941ec966a63928264f97a919afac2",
+    "extraction": {
+      "warnings": [
+        "The document contains an instruction addressed to an AI assistant. It was ignored."
+      ],
+      "kind": "Maintenance",
+      "event_date": 20250803,
+      "odometer_km": 81300,
+      "provider_name": "City Motors Workshop",
+      "summary": {
+        "en": "Coolant flush and four spark plugs replaced.",
+        "ar": "تغيير سائل التبريد وأربع شمعات إشعال."
+      },
+      "evidence": {
+        "kind": "Service Invoice",
+        "event_date": "Date: 2025-08-03",
+        "odometer_km": "Odometer: 81,300 km",
+        "provider_name": "City Motors Workshop"
+      }
+    }
+  },
+  {
+    "file": "elantra-2021-accident-repair.png",
+    "car": "elantra",
+    "title": "Accident Repair Report · 2021-11-05",
+    "sha256": "b4259cd9ae3e025ce6f339466fe8e2575410da051658bdedec26ea74ef96722b",
+    "extraction": {
+      "warnings": [],
+      "kind": "Accident",
+      "event_date": 20211105,
+      "odometer_km": 96400,
+      "provider_name": "Al Amal Body Shop",
+      "summary": {
+        "en": "Rear collision repair: rear bumper and rear left lamp replaced, rear left quarter panel repaired and painted.",
+        "ar": "إصلاح تصادم خلفي: تغيير الإكصدام الخلفي والفانوس الخلفي الأيسر، وسمكرة ودهان الرفرف الخلفي الأيسر."
+      },
+      "evidence": {
+        "kind": "Accident Repair Report",
+        "event_date": "Date: 2021-11-05",
+        "odometer_km": "Odometer: 96,400 km",
+        "provider_name": "Al Amal Body Shop"
+      }
+    }
+  },
+  {
+    "file": "elantra-2023-service.png",
+    "car": "elantra",
+    "title": "Service Invoice · 2023-04-18",
+    "sha256": "e9ca3b3e6f55bcccde0cc851b00be3ae31483fc7e93185d2a5c74d24cb94b0d9",
+    "extraction": {
+      "warnings": [],
+      "kind": "Maintenance",
+      "event_date": 20230418,
+      "odometer_km": 88000,
+      "provider_name": "Quick Fix Garage",
+      "summary": {
+        "en": "Oil and oil filter change.",
+        "ar": "تغيير زيت المحرك وفلتر الزيت."
+      },
+      "evidence": {
+        "kind": "Service Invoice",
+        "event_date": "Date: 2023-04-18",
+        "odometer_km": "Odometer: 88,000 km",
+        "provider_name": "Quick Fix Garage"
+      }
+    }
+  }
+]

@@ -1,0 +1,114 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #0b1220;
+  --surface: #121b2e;
+  --surface-2: #18233b;
+  --line: #26334f;
+  --text: #e8eef9;
+  --muted: #9aa8c2;
+  --brand: #2dd4bf;
+  --brand-ink: #04211d;
+  --ok: #4ade80;
+  --warn: #fbbf24;
+  --danger: #f87171;
+  --focus: #c4b5fd;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-ink: var(--text);
+  --color-muted: var(--muted);
+  --color-brand: var(--brand);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-inter), var(--font-arabic), system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+html { color-scheme: dark; }
+html[lang="ar"] body { font-family: var(--font-arabic), var(--font-inter), system-ui, sans-serif; }
+body {
+  background:
+    radial-gradient(1100px 520px at 85% -10%, rgba(45, 212, 191, 0.13), transparent 60%),
+    radial-gradient(900px 480px at -10% 10%, rgba(99, 102, 241, 0.12), transparent 60%),
+    var(--bg);
+  background-attachment: fixed;
+  color: var(--text);
+  font-family: var(--font-sans);
+  line-height: 1.6;
+}
+
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 20px; }
+.card-2 { background: var(--surface-2); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+.h2 { font-size: 1.125rem; font-weight: 700; }
+.muted { color: var(--muted); }
+.ltr { direction: ltr; unicode-bidi: isolate; font-family: var(--font-mono); font-size: 0.8125rem; overflow-wrap: anywhere; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 40px; padding: 8px 16px; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--surface-2); color: var(--text); font-weight: 600; font-size: 0.9375rem;
+  cursor: pointer; transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+.btn:hover:not(:disabled) { border-color: var(--brand); }
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-primary { background: var(--brand); color: var(--brand-ink); border-color: var(--brand); }
+.btn-primary:hover:not(:disabled) { background: #5eead4; }
+.btn-danger { border-color: rgba(248, 113, 113, 0.5); color: var(--danger); }
+.btn-sm { min-height: 32px; padding: 4px 12px; font-size: 0.8125rem; border-radius: 10px; }
+
+.input {
+  width: 100%; min-height: 40px; padding: 8px 12px; border-radius: 10px;
+  background: var(--bg); border: 1px solid var(--line); color: var(--text); font: inherit;
+}
+.input:focus { border-color: var(--brand); }
+.label { display: block; font-size: 0.8125rem; color: var(--muted); margin-bottom: 4px; }
+
+.badge {
+  display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px;
+  font-size: 0.75rem; font-weight: 600; border: 1px solid var(--line); background: var(--surface-2); white-space: nowrap;
+}
+.badge-ok { color: var(--ok); border-color: rgba(74, 222, 128, 0.4); background: rgba(74, 222, 128, 0.08); }
+.badge-warn { color: var(--warn); border-color: rgba(251, 191, 36, 0.4); background: rgba(251, 191, 36, 0.08); }
+.badge-danger { color: var(--danger); border-color: rgba(248, 113, 113, 0.45); background: rgba(248, 113, 113, 0.08); }
+.badge-brand { color: var(--brand); border-color: rgba(45, 212, 191, 0.4); background: rgba(45, 212, 191, 0.08); }
+
+.spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid currentColor; border-top-color: transparent; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* 3D passport card */
+.scene { perspective: 1200px; }
+.passport {
+  position: relative; width: 100%; aspect-ratio: 1.58; transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); animation: float 7s ease-in-out infinite;
+  cursor: pointer; border: 0; background: none; padding: 0; color: inherit; text-align: start; display: block;
+}
+.passport.flipped { animation: none; }
+.passport-face {
+  position: absolute; inset: 0; border-radius: 20px; padding: 22px; backface-visibility: hidden; overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: linear-gradient(135deg, #0f766e 0%, #134e4a 38%, #1e1b4b 100%);
+  box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+.passport-face::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.16) 45%, transparent 60%);
+  transform: translateX(var(--shine, -40%));
+}
+.passport-back { transform: rotateY(180deg); background: linear-gradient(135deg, #1e1b4b 0%, #172554 55%, #134e4a 100%); }
+@keyframes float { 0%, 100% { translate: 0 0; } 50% { translate: 0 -8px; } }
+
+.flash { animation: flash 1.6s ease-out; }
+@keyframes flash { 0% { box-shadow: 0 0 0 3px var(--brand); } 100% { box-shadow: 0 0 0 0 transparent; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
