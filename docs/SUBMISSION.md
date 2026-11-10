@@ -39,18 +39,41 @@
 
 ## بوست X
 
-> Buying a used car? Don't trust the odometer. Trust the chain. 🚗
->
-> CarPass: a used-car passport + escrowed sale on @NEARProtocol testnet.
-> • AI reads invoices, you approve every field
-> • Workshops confirm with their own account
-> • Contract flags odometer rollbacks
-> • Payment released only on handover
->
-> Press one button and the site demos itself, live on chain:
-> https://carpass-near.vercel.app
->
-> Code: https://github.com/medomohamed22/Near_Agent
-> #NEARHackathon
+ارفع الفيديو `CarPass-demo-X.mp4` (2:18) مع التغريدة الأولى، ثم أضف الردّين كسلسلة.
 
-(أرفق الفيديو أو صورة `docs/screens/home.png`.)
+**التغريدة الأولى (277/280 حرفًا):**
+
+```
+Used car? Don't trust the odometer. Trust the chain. 🚗
+
+CarPass: a used-car passport + escrowed sale on @NEARProtocol
+
+✅ AI reads invoices
+✅ Workshops verify on-chain
+✅ Odometer rollbacks flagged
+✅ Payment released only on handover
+
+https://carpass-near.vercel.app
+
+#NEARHackathon
+```
+
+**الرد الأول:**
+
+```
+Press "Watch the live demo" and the site runs a full sale by itself: passport, AI-read invoices, workshop check, escrow, handover, and a rolled-back odometer caught on chain.
+
+No wallet needed to try it. Testnet only, no real money.
+```
+
+**الرد الثاني:**
+
+```
+Built on NEAR testnet:
+• Rust smart contract holds the payment in escrow
+• Muse Spark AI extracts every field with a quote from the document
+• Every step is a real transaction
+
+Code 👇
+https://github.com/medomohamed22/Near_Agent
+```
