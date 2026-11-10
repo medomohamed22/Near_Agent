@@ -61,6 +61,8 @@ export type Extraction = {
   odometer_km: number | null;
   provider_name: string | null;
   summary: string;
+  /** The same summary in each interface language, when both are known (the seeded samples). */
+  summary_i18n?: { en?: string; ar?: string };
   /** Field name -> the exact words in the document that support it. */
   evidence: Partial<Record<"kind" | "event_date" | "odometer_km" | "provider_name", string>>;
   warnings: string[];

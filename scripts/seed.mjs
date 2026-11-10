@@ -31,7 +31,7 @@ async function addSample(role, vehicleId, file) {
   const form = new FormData();
   form.set('file', new Blob([readFileSync(SAMPLES + file)], { type: 'image/png' }), file);
   form.set('vehicleId', String(vehicleId));
-  form.set('extraction', JSON.stringify({ ...sample.extraction, summary: sample.extraction.summary.en }));
+  form.set('extraction', JSON.stringify({ ...sample.extraction, summary: sample.extraction.summary.en, summary_i18n: sample.extraction.summary }));
   const res = await fetch(`${APP_URL}/api/documents`, { method: 'POST', body: form });
   if (!res.ok) throw new Error(`storing ${file} failed: ${res.status} ${await res.text()}`);
   const x = sample.extraction;

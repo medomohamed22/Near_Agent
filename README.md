@@ -2,6 +2,8 @@
 
 **A used-car passport and an escrowed sale, on NEAR testnet.**
 
+**Live demo: https://carpass-near.vercel.app** — press *Watch the live demo* and the site runs itself.
+
 Buying a used car means trusting a stack of loose invoices and an odometer that may have been rolled back, then handing over money before you are sure. CarPass puts the car's history and the sale on one page:
 
 - **Evidence, not claims.** The seller photographs an invoice or report. An AI proposes the fields and quotes the words in the document that support each one; the seller reviews every field. The document's SHA-256 and the odometer reading go on chain.
@@ -16,22 +18,23 @@ Buying a used car means trusting a stack of loose invoices and an odometer that 
 
 ## Try it
 
-There are two ways in:
+**The fastest way: press *Watch the live demo*.** The site then drives itself through the whole product in about two minutes, with nothing staged: it opens a fresh passport, has the AI read two invoices and registers their hashes, has the workshop confirm one, lists the car, pays into escrow, hands over, releases the payment, adds an invoice with a lower odometer reading (flagged as a conflict), asks the records a question and checks a stored file against its on-chain hash. Each step shows its transaction with a link to the explorer.
 
-- **Guest demo** (no wallet): the bar under the header switches between four shared testnet accounts (seller, buyer, workshop, reviewer), so you can play both sides of a sale.
-- **Your own wallet**: press *Connect wallet* and pick a wallet that supports NEAR testnet (Meteor, Intear, Nightly, Ledger and others). You then act as your own account: your passports, your listings, your purchases, each approved in your wallet.
+To drive it yourself there are two ways in:
+
+- **Guest demo** (no wallet): the bar under the hero switches between four shared testnet accounts (seller, buyer, workshop, reviewer), so you can play both sides of a sale.
+- **Your own wallet**: press *Connect wallet* and pick a wallet that supports NEAR testnet (Meteor, Intear, Nightly, Ledger and others). You then act as your own account: your passports, your listings, your purchases, each approved in your wallet. Testnet NEAR is free from https://near-faucet.io.
 
 The page opens in English with a light theme. The round buttons in the header switch to Arabic (right-to-left) and to a dark theme; both choices are remembered.
 
-A two-minute tour:
+Things to try by hand:
 
-1. As **Buyer**, press *Pay into escrow* on the Toyota Corolla.
-2. As **Seller**, press *I handed over the car*. A handover QR code appears.
-3. As **Buyer**, press *I received the car*. The payment reaches the seller and the passport moves to the buyer; both transactions link to the explorer.
-4. Still as Buyer (now the holder), add the sample *Service Invoice · 2025-05-10*. Its reading is lower than the last one, so the record is flagged as an odometer conflict and the record score drops.
-5. Add the sample marked ⚑. It contains a line telling the AI to declare the car accident-free. The instruction is reported as a warning and ignored.
-6. Press *Verify file* on any record: the browser downloads the stored copy, hashes it and compares it with the hash on chain.
-7. Open the Hyundai Elantra and ask *Are there any recorded accidents?*
+1. As **Buyer**, press *Pay into escrow* on the Toyota Corolla. As **Seller**, press *I handed over the car*; a handover QR code appears. As **Buyer**, press *I received the car*: the payment reaches the seller and the passport moves.
+2. As the holder, add the sample *Service Invoice · 2025-05-10*. Its reading is lower than the last one, so the record is flagged as an odometer conflict and the record score drops.
+3. Add the sample marked ⚑. It contains a line telling the AI to declare the car accident-free. The AI reports the instruction as a warning and does not follow it.
+4. Press *Verify file* on any record: the browser downloads the stored copy, hashes it and compares it with the hash on chain.
+5. Open the Hyundai Elantra and ask *Are there any recorded accidents?*
+6. Type `DEMO0COROLLA2018X` into *Find by VIN*: a buyer who knows a car's VIN can look its passport up.
 
 ## What is real and what is simulated
 
@@ -41,7 +44,7 @@ A two-minute tour:
 | Escrow: hold, release, refund, timeout, dispute | Real transfers of **testnet** NEAR (no monetary value) |
 | Document hashing and in-browser verification | Real |
 | Document storage | Real (Supabase private bucket, reachable only by the server) |
-| AI extraction and Q&A | Real when `META_MODEL_API_KEY` is set. Otherwise the header shows "AI on fallback": sample documents use stored readings, other uploads are filled in by hand, and Q&A returns plain facts from the chain. Fallbacks are always labelled. |
+| AI extraction and Q&A | Real on the live site (Meta Model API, `muse-spark-1.3-contributor`). Without `META_MODEL_API_KEY` the header shows "AI on fallback": sample documents use stored readings, other uploads are filled in by hand, and Q&A returns plain facts from the chain. Fallbacks are always labelled. |
 | Accounts | Your own NEAR testnet wallet (through NEAR Connect), or guest mode, which signs with shared demo accounts on the server. |
 | Workshops, cars, invoices | Fictional samples |
 | Dispute reviewer | A demo admin account. Its decision is not a legal ruling. |
@@ -52,8 +55,8 @@ A two-minute tour:
 | | |
 |---|---|
 | Network | NEAR testnet |
-| Contract | [`carpass-v4.testnet`](https://testnet.nearblocks.io/address/carpass-v4.testnet) |
-| Deploy | [`FdAfZk7f…`](https://testnet.nearblocks.io/txns/FdAfZk7feLmA9Ufb4ncHjgVGpKzJfZs1dehHj3ixCLmP) |
+| Contract | [`carpass-v5.testnet`](https://testnet.nearblocks.io/address/carpass-v5.testnet) |
+| Deploy | [`6E4cBRFc…`](https://testnet.nearblocks.io/txns/6E4cBRFcKXLZZTwc8w2dRhTCPQrhDiHzW5vKPRnoXGTP) |
 
 The contract stores document hashes, dates, odometer readings, account ids and sale state. It never stores a VIN (only a salted hash), a name, a file or any other personal data.
 
@@ -163,7 +166,8 @@ cd contract && cargo test
 
 ## Limits
 
-- Wallet signing was checked up to the wallet chooser; a full signed transaction from a real wallet has not been run in an automated test. With a wallet, a workshop or reviewer role applies only if the contract admin approved that account.
+- With a wallet, a workshop or reviewer role applies only if the contract admin approved that account. Wallet signing was tested by hand with Meteor on testnet, not in an automated test.
+- The live demo accepts the AI's reading without the human review step, and says so. Each run adds a "Demo car" passport to the shared contract.
 - Guest accounts are shared, so visitors see each other's actions inside the demo.
 - Uploading does not require proof of who is uploading; what protects a passport is that only its holder or a workshop can register the hash. Someone holding the same file could store their own summary for it in the moments before the holder registers it.
 - If a wallet owner buys a demo-held car and a dispute follows, only the contract admin can settle it, not the guest reviewer.

@@ -239,3 +239,24 @@ li.card-2:hover { transform: translateY(-2px); box-shadow: var(--shadow); border
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* Live demo panel: docked to a corner on wide screens, a bottom sheet on phones. */
+.tour {
+  position: fixed; z-index: 60; inset-inline-end: 20px; bottom: 20px; width: min(400px, calc(100vw - 24px)); max-height: min(78vh, 720px);
+  display: flex; flex-direction: column; padding: 18px; border-radius: 22px; border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface-solid) 94%, transparent); backdrop-filter: blur(18px); box-shadow: var(--shadow-lift);
+}
+.tour ol { min-height: 0; flex: 1 1 auto; }
+@media (max-width: 640px) {
+  .tour { inset-inline: 8px; bottom: 8px; width: auto; max-height: 52vh; }
+}
+
+.how { counter-reset: how; }
+.how li { counter-increment: how; position: relative; }
+.how li::before {
+  content: counter(how); display: grid; place-items: center; width: 34px; height: 34px; margin-bottom: 10px; border-radius: 12px;
+  font-weight: 800; color: #fff; background: linear-gradient(135deg, var(--brand), var(--brand-2));
+  box-shadow: 0 8px 18px -8px var(--brand);
+}
+.how li:hover { transform: translateY(-3px); box-shadow: var(--shadow-lift); }
+.how li { transition: transform 0.25s ease, box-shadow 0.25s ease; }

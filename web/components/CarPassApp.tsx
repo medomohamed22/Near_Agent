@@ -12,6 +12,7 @@ import type { CarRecord, Extraction, RecordKind, Sale, SellerStats, Vehicle } fr
 import { connectWallet, disconnectWallet, onWalletChange, restoreWallet, walletCall } from "@/lib/wallet";
 import AddRecord from "./AddRecord";
 import AskPanel from "./AskPanel";
+import DemoTour from "./DemoTour";
 import type { Zone } from "./Car3D";
 import Passport3D from "./Passport3D";
 import SalePanel from "./SalePanel";
@@ -26,6 +27,7 @@ type Health = { ai: { live: boolean } };
 
 const VEHICLE_DEPOSIT = parseNear(VEHICLE_DEPOSIT_NEAR);
 const OPEN_SALE = ["Listed", "Funded", "HandedOver", "Disputed"];
+const NAV_LIMIT = 7;
 const i = (n: number) => ({ "--i": n }) as CSSProperties;
 
 const Sun = () => (
@@ -58,6 +60,9 @@ export default function CarPassApp() {
   const [health, setHealth] = useState<Health | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const [notFound, setNotFound] = useState(false);
+  const [vinMissing, setVinMissing] = useState(false);
+  const [vin, setVin] = useState("");
+  const [showAll, setShowAll] = useState(false);
   const [owed, setOwed] = useState("0");
   /** The passport on screen, so a slow answer for another passport is ignored. */
   const selectedRef = useRef<number | null>(null);
@@ -145,11 +150,12 @@ export default function CarPassApp() {
     return () => { live = false; };
   }, [wallet]);
 
+  // Reads the open passport from the ref, so long-running callers (the demo) always refresh the current one.
   const refresh = useCallback(async () => {
     const list = await loadVehicles();
-    const v = list?.find((x) => x.id === selected);
+    const v = list?.find((x) => x.id === selectedRef.current);
     if (v) await loadDetail(v);
-  }, [loadVehicles, loadDetail, selected]);
+  }, [loadVehicles, loadDetail]);
 
   const open = (id: number) => {
     if (id === selected) return;
@@ -158,6 +164,26 @@ export default function CarPassApp() {
     setFilter(null);
     setNotFound(false);
     setSelected(id);
+  };
+
+  /** Reloads the list (a passport may be new) and opens one. */
+  const openPassport = useCallback(async (id: number) => {
+    const list = await loadVehicles();
+    const v = list?.find((x) => x.id === id);
+    if (!v) return;
+    selectedRef.current = id;
+    setDetail(null);
+    setFilter(null);
+    setNotFound(false);
+    setSelected(id);
+    await loadDetail(v);
+  }, [loadVehicles, loadDetail]);
+
+  const findByVin = async (vin: string) => {
+    setVinMissing(false);
+    const found = await view<Vehicle | null>("get_vehicle_by_vin", { vin_hash: await vinHash(vin) }).catch(() => null);
+    if (found) await openPassport(found.id);
+    else setVinMissing(true);
   };
 
   // A payment the contract could not deliver earlier stays claimable.
@@ -226,6 +252,13 @@ export default function CarPassApp() {
     ];
   }, [records, lang]);
 
+  // Demo runs add passports, so the bar shows the seeded ones, the newest few and the open one.
+  const shownVehicles = useMemo(() => {
+    const all = vehicles ?? [];
+    if (showAll || all.length <= NAV_LIMIT) return all;
+    return all.filter((v, n) => n < 2 || n >= all.length - (NAV_LIMIT - 2) || v.id === selected);
+  }, [vehicles, showAll, selected]);
+
   const trust = vehicle && current ? trustScore(vehicle, current.stats, current.records) : null;
   const isHolder = !!vehicle && vehicle.owner === me;
 
@@ -257,11 +290,22 @@ export default function CarPassApp() {
       <section className="reveal pb-2 pt-8 sm:pt-12">
         <h1 className="text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl">{t("heroA")} <span className="gradient-text">{t("heroB")}</span></h1>
         <p className="mt-3 max-w-2xl text-base muted sm:text-lg">{t("heroSub")}</p>
-        <ul className="mt-4 flex flex-wrap gap-2 text-sm">
-          {(["feat1", "feat2", "feat3"] as const).map((k, n) => (
-            <li key={k} className="badge badge-brand reveal !px-3 !py-1" style={i(n + 2)}>✓ {t(k)}</li>
+        <div className="mt-5 flex flex-wrap items-center gap-3">
+          <DemoTour t={t} lang={lang} onRole={setRole} openPassport={openPassport} refresh={refresh} />
+          <ul className="flex flex-wrap gap-2 text-sm">
+            {(["feat1", "feat2", "feat3"] as const).map((k, n) => (
+              <li key={k} className="badge badge-brand reveal !px-3 !py-1" style={i(n + 2)}>✓ {t(k)}</li>
+            ))}
+          </ul>
+        </div>
+        <ol className="how mt-8 grid gap-4 sm:grid-cols-3">
+          {([["how1", "how1d"], ["how2", "how2d"], ["how3", "how3d"]] as const).map(([title, body], n) => (
+            <li key={title} className="card reveal" style={i(n + 3)}>
+              <h2 className="h2">{t(title)}</h2>
+              <p className="mt-1 text-sm muted">{t(body)}</p>
+            </li>
           ))}
-        </ul>
+        </ol>
       </section>
 
       <div className="card reveal mt-6 flex flex-wrap items-center gap-x-4 gap-y-2" style={i(1)}>
@@ -304,17 +348,29 @@ export default function CarPassApp() {
           <span className="text-sm font-semibold">{t("passports")}</span>
           {vehicles === null && !loadError && <span className="spinner" />}
           {vehicles?.length === 0 && <span className="text-sm muted">{t("noPassports")}</span>}
-          {vehicles?.map((v) => (
+          {shownVehicles.map((v) => (
             <button key={v.id} type="button" className={`btn btn-sm ${selected === v.id ? "btn-primary" : ""}`} aria-current={selected === v.id ? "page" : undefined} onClick={() => open(v.id)}>
               {v.label}
               {v.odometer_conflicts > 0 && <span aria-label={t("badge_conflict")}>⚠</span>}
               {v.active_sale != null && <span className="dot" aria-label={t("sale")} />}
             </button>
           ))}
+          {(vehicles?.length ?? 0) > NAV_LIMIT && (
+            <button type="button" className="btn btn-sm" onClick={() => setShowAll((a) => !a)} aria-expanded={showAll}>
+              {showAll ? t("showFewer") : `${t("showAll")} (${vehicles!.length})`}
+            </button>
+          )}
           {canTrade && (
             <button type="button" className="btn btn-sm" onClick={() => setCreating((c) => !c)} aria-expanded={creating}>＋ {t("newPassport")}</button>
           )}
+          <span className="grow" />
+          <form className="flex items-center gap-2" role="search" onSubmit={(e) => { e.preventDefault(); if (vin.trim().length >= 11) findByVin(vin); }}>
+            <label htmlFor="vin-search" className="sr-only">{t("findVin")}</label>
+            <input id="vin-search" className="input ltr !min-h-[34px] w-52 !py-1" maxLength={17} placeholder={t("findVinPh")} value={vin} onChange={(e) => setVin(e.target.value.toUpperCase())} aria-label={t("findVin")} />
+            <button className="btn btn-sm" disabled={vin.trim().length < 11}>{t("find")}</button>
+          </form>
         </nav>
+        {vinMissing && <Notice tone="warn">{t("vinMissing")}</Notice>}
 
         {creating && (
           <NewPassport t={t} onCancel={() => setCreating(false)} onCreate={async (label, vin) => {
@@ -371,7 +427,7 @@ export default function CarPassApp() {
 
             <div className="grid gap-6 lg:grid-cols-[1fr_minmax(0,380px)]">
               <div className="space-y-6">
-                <Timeline t={t} vehicleId={vehicle.id} records={current.records} docs={current.docs}
+                <Timeline t={t} lang={lang} vehicleId={vehicle.id} records={current.records} docs={current.docs}
                   filter={filter?.kinds ?? null} onFilter={(kinds) => setFilter(kinds ? { kinds, zone: null } : null)}
                   canAttest={isWorkshop && !isHolder} flash={flash}
                   onAttest={async (index) => { await act(`${t("attest")} #${index + 1}`, "attest_record", { vehicle_id: vehicle.id, index }); }} />

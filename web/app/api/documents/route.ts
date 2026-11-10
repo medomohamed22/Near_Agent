@@ -16,6 +16,7 @@ const ExtractionBody = z.object({
   odometer_km: z.number().int().min(0).max(2_000_000).nullable(),
   provider_name: z.string().max(120).nullable(),
   summary: z.string().max(400),
+  summary_i18n: z.object({ en: z.string().max(400), ar: z.string().max(400) }).partial().optional(),
   evidence: z.record(z.string(), z.string().max(200)),
   warnings: z.array(z.string().max(200)).max(5),
 });

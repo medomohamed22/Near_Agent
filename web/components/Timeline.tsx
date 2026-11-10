@@ -2,13 +2,14 @@
 import { useState } from "react";
 import { documentUrl } from "@/lib/api";
 import { sha256Hex } from "@/lib/hash";
-import type { Key } from "@/lib/i18n";
+import type { Key, Lang } from "@/lib/i18n";
 import { formatDate } from "@/lib/odometer";
 import { RECORD_KINDS, type CarRecord, type Extraction, type RecordKind } from "@/lib/types";
 import { Account, Busy, Mono, Notice } from "./ui";
 
 type Props = {
   t: (k: Key) => string;
+  lang: Lang;
   vehicleId: number;
   records: CarRecord[];
   docs: Record<string, Extraction>;
@@ -21,8 +22,8 @@ type Props = {
 
 type Check = "idle" | "busy" | "match" | "mismatch" | "missing";
 
-function RecordCard({ t, vehicleId, record, doc, canAttest, onAttest, flash, order }: {
-  t: Props["t"]; vehicleId: number; order: number; record: CarRecord; doc?: Extraction; canAttest: boolean; onAttest: Props["onAttest"]; flash: boolean;
+function RecordCard({ t, lang, vehicleId, record, doc, canAttest, onAttest, flash, order }: {
+  t: Props["t"]; lang: Lang; vehicleId: number; order: number; record: CarRecord; doc?: Extraction; canAttest: boolean; onAttest: Props["onAttest"]; flash: boolean;
 }) {
   const [check, setCheck] = useState<Check>("idle");
   const [attesting, setAttesting] = useState(false);
@@ -53,7 +54,7 @@ function RecordCard({ t, vehicleId, record, doc, canAttest, onAttest, flash, ord
         {record.odometer_conflict && <span className="badge badge-danger">⚠ {t("badge_conflict")}</span>}
       </div>
 
-      {doc?.summary && <p className="mt-2">{doc.summary}</p>}
+      {doc?.summary && <p className="mt-2">{doc.summary_i18n?.[lang] || doc.summary}</p>}
       {record.odometer_conflict && <p className="mt-2 text-sm text-warn">{t("conflictNote")}</p>}
 
       <dl className="mt-2 grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
@@ -93,7 +94,7 @@ function RecordCard({ t, vehicleId, record, doc, canAttest, onAttest, flash, ord
   );
 }
 
-export default function Timeline({ t, vehicleId, records, docs, filter, onFilter, canAttest, onAttest, flash }: Props) {
+export default function Timeline({ t, lang, vehicleId, records, docs, filter, onFilter, canAttest, onAttest, flash }: Props) {
   const present = RECORD_KINDS.filter((k) => records.some((r) => r.kind === k));
   const shown = records.filter((r) => !filter || filter.includes(r.kind)).sort((a, b) => b.event_date - a.event_date || b.index - a.index);
   const single = filter?.length === 1 ? filter[0] : null;
@@ -114,7 +115,7 @@ export default function Timeline({ t, vehicleId, records, docs, filter, onFilter
       ) : (
         <ol className="mt-4 space-y-3">
           {shown.map((r, order) => (
-            <RecordCard key={r.index} order={order} t={t} vehicleId={vehicleId} record={r} doc={docs[r.doc_hash]} canAttest={canAttest} onAttest={onAttest} flash={flash === r.index} />
+            <RecordCard key={r.index} order={order} t={t} lang={lang} vehicleId={vehicleId} record={r} doc={docs[r.doc_hash]} canAttest={canAttest} onAttest={onAttest} flash={flash === r.index} />
           ))}
         </ol>
       )}
