@@ -29,7 +29,7 @@ type Row = { vehicle_id: number; sha256: string; storage_path: string };
 /** Marks rows whose hash is now on chain as published; they are frozen from then on. */
 async function publish(db: SupabaseClient, vehicleId: number, hashes: string[]) {
   if (hashes.length === 0) return;
-  const { error } = await db.from("documents").update({ published: true })
+  const { error } = await db.from("carpass_documents").update({ published: true })
     .eq("contract_id", CONTRACT_ID).eq("vehicle_id", vehicleId).in("sha256", hashes).eq("published", false);
   if (error) console.error("publish failed", error.message);
 }
@@ -40,7 +40,7 @@ async function publish(db: SupabaseClient, vehicleId: number, hashes: string[]) 
  */
 async function sweepPending(db: SupabaseClient) {
   const cutoff = new Date(Date.now() - PENDING_TTL_MS).toISOString();
-  const { data, error } = await db.from("documents").select("vehicle_id, sha256, storage_path")
+  const { data, error } = await db.from("carpass_documents").select("vehicle_id, sha256, storage_path")
     .eq("contract_id", CONTRACT_ID).eq("published", false).lt("created_at", cutoff).limit(20);
   if (error || !data?.length) return;
   const byVehicle = new Map<number, Row[]>();
@@ -51,7 +51,7 @@ async function sweepPending(db: SupabaseClient) {
     const stale = rows.filter((r) => !onChain.has(r.sha256));
     if (stale.length === 0) continue;
     await db.storage.from(BUCKET).remove(stale.map((r) => r.storage_path));
-    await db.from("documents").delete().eq("contract_id", CONTRACT_ID).eq("vehicle_id", vehicleId).in("sha256", stale.map((r) => r.sha256)).eq("published", false);
+    await db.from("carpass_documents").delete().eq("contract_id", CONTRACT_ID).eq("vehicle_id", vehicleId).in("sha256", stale.map((r) => r.sha256)).eq("published", false);
   }
 }
 
@@ -101,14 +101,14 @@ export async function POST(request: Request) {
   // Replaces only a pending row. A published row is never matched by this
   // filter, so a registered document's fields cannot be overwritten.
   const pending = { storage_path: path, mime: upload.mime, size_bytes: upload.bytes.length, extraction: extraction.data, created_at: new Date().toISOString() };
-  const updated = await db.from("documents").update(pending)
+  const updated = await db.from("carpass_documents").update(pending)
     .eq("contract_id", CONTRACT_ID).eq("vehicle_id", vehicleId).eq("sha256", upload.sha256).eq("published", false).select("sha256");
   if (updated.error) {
     console.error("documents update failed", updated.error);
     return fail(502, "The document could not be stored.");
   }
   if (updated.data.length === 0) {
-    const inserted = await db.from("documents").insert({ contract_id: CONTRACT_ID, vehicle_id: vehicleId, sha256: upload.sha256, ...pending });
+    const inserted = await db.from("carpass_documents").insert({ contract_id: CONTRACT_ID, vehicle_id: vehicleId, sha256: upload.sha256, ...pending });
     if (inserted.error) {
       // A unique violation here means a published row exists.
       const frozen = inserted.error.code === "23505";
@@ -135,7 +135,7 @@ export async function GET(request: Request) {
   const sha256 = url.searchParams.get("sha256");
 
   if (!sha256) {
-    const rows = await db.from("documents").select("sha256, extraction, published").eq("contract_id", CONTRACT_ID).eq("vehicle_id", vehicleId);
+    const rows = await db.from("carpass_documents").select("sha256, extraction, published").eq("contract_id", CONTRACT_ID).eq("vehicle_id", vehicleId);
     if (rows.error) return fail(502, "The documents could not be read.");
     const live = rows.data.filter((r) => byHash.has(r.sha256));
     await publish(db, vehicleId, live.filter((r) => !r.published).map((r) => r.sha256));
@@ -146,7 +146,7 @@ export async function GET(request: Request) {
   }
 
   if (!isSha256(sha256) || !byHash.has(sha256)) return fail(404, "No such document on this passport.");
-  const row = await db.from("documents").select("storage_path, mime").eq("contract_id", CONTRACT_ID).eq("vehicle_id", vehicleId).eq("sha256", sha256).maybeSingle();
+  const row = await db.from("carpass_documents").select("storage_path, mime").eq("contract_id", CONTRACT_ID).eq("vehicle_id", vehicleId).eq("sha256", sha256).maybeSingle();
   if (row.error || !row.data) return fail(404, "The file for this record was not stored.");
   const file = await db.storage.from(BUCKET).download(row.data.storage_path);
   if (file.error) return fail(502, "The file could not be read.");

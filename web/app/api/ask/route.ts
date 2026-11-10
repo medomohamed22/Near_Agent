@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   const fields = new Map<string, Extraction>();
   const db = await supabase();
   if (db) {
-    const rows = await db.from("documents").select("sha256, extraction").eq("contract_id", CONTRACT_ID).eq("vehicle_id", vehicleId);
+    const rows = await db.from("carpass_documents").select("sha256, extraction").eq("contract_id", CONTRACT_ID).eq("vehicle_id", vehicleId);
     for (const r of rows.data ?? []) if (r.extraction) fields.set(r.sha256, r.extraction as Extraction);
   }
   // Stored fields are used only while they agree with the contract's own record of the document.
