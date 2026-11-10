@@ -35,7 +35,7 @@
 | 72–82 | إجابة السؤال، ثم فتح رابط معاملة في المستكشف | "Ask the records a question and you get an answer with sources, or an honest 'no record'. Every step is on the explorer." |
 | 82–90 | تبديل العربية والمظهر الليلي، ثم زر Connect wallet | "English and Arabic, light and dark, guest mode or your own wallet. CarPass, on NEAR testnet." |
 
-نصيحة: العرض الحي يأخذ نحو دقيقتين، فسجّله كاملًا ثم سرّع المقاطع التي تنتظر فيها المعاملات.
+نصيحة: العرض الحي يأخذ من دقيقتين إلى ثلاث، فسجّله كاملًا ثم سرّع المقاطع التي تنتظر فيها المعاملات.
 
 ## بوست X
 

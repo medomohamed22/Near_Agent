@@ -18,7 +18,7 @@ Buying a used car means trusting a stack of loose invoices and an odometer that 
 
 ## Try it
 
-**The fastest way: press *Watch the live demo*.** The site then drives itself through the whole product in about two minutes, with nothing staged: it opens a fresh passport, has the AI read two invoices and registers their hashes, has the workshop confirm one, lists the car, pays into escrow, hands over, releases the payment, adds an invoice with a lower odometer reading (flagged as a conflict), asks the records a question and checks a stored file against its on-chain hash. Each step shows its transaction with a link to the explorer.
+**The fastest way: press *Watch the live demo*.** The site then drives itself through the whole product in two to three minutes, with nothing staged: it opens a fresh passport, has the AI read two invoices and registers their hashes, has the workshop confirm one, lists the car, pays into escrow, hands over, releases the payment, adds an invoice with a lower odometer reading (flagged as a conflict), asks the records a question and checks a stored file against its on-chain hash. Each step shows its transaction with a link to the explorer.
 
 To drive it yourself there are two ways in:
 
