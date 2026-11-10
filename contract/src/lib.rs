@@ -5,7 +5,7 @@
 //! Nothing here proves or transfers legal ownership of a vehicle.
 
 use near_sdk::store::{LookupMap, LookupSet};
-use near_sdk::{env, log, near, require, AccountId, BorshStorageKey, NearToken, PanicOnDefault, Promise};
+use near_sdk::{env, log, near, require, AccountId, BorshStorageKey, Gas, NearToken, PanicOnDefault, Promise, PromiseError};
 
 mod records;
 mod sale;
@@ -18,7 +18,11 @@ pub use sale::{Sale, SaleStatus};
 /// Deposit required to open a passport; it pays for the passport's storage
 /// and for the records later attached to it.
 pub const VEHICLE_DEPOSIT: NearToken = NearToken::from_millinear(100);
+/// Paid with every listing and kept by the contract: each listing adds a sale
+/// record that stays in storage, so the lister covers it.
+pub const LISTING_FEE: NearToken = NearToken::from_millinear(10);
 pub const MAX_RECORDS_PER_VEHICLE: u32 = 60;
+const PAYOUT_CALLBACK_GAS: Gas = Gas::from_tgas(5);
 pub const MAX_LABEL_LEN: usize = 64;
 pub const MAX_PAGE: u32 = 50;
 
@@ -31,6 +35,7 @@ enum Key {
     Records,
     Sales,
     SellerStats,
+    Owed,
 }
 
 #[near(serializers = [borsh, json])]
@@ -67,6 +72,7 @@ pub struct Config {
     pub vehicle_count: u64,
     pub sale_count: u64,
     pub vehicle_deposit: NearToken,
+    pub listing_fee: NearToken,
 }
 
 #[near(contract_state)]
@@ -81,6 +87,8 @@ pub struct Contract {
     records: LookupMap<(u64, u32), Record>,
     sales: LookupMap<u64, Sale>,
     seller_stats: LookupMap<AccountId, SellerStats>,
+    /// Payments that could not be delivered, waiting for `withdraw_owed`.
+    owed: LookupMap<AccountId, NearToken>,
     next_vehicle_id: u64,
     next_sale_id: u64,
 }
@@ -100,6 +108,7 @@ impl Contract {
             records: LookupMap::new(Key::Records),
             sales: LookupMap::new(Key::Sales),
             seller_stats: LookupMap::new(Key::SellerStats),
+            owed: LookupMap::new(Key::Owed),
             next_vehicle_id: 1,
             next_sale_id: 1,
         }
@@ -156,9 +165,36 @@ impl Contract {
 
         let extra = attached.saturating_sub(VEHICLE_DEPOSIT);
         if !extra.is_zero() {
-            let _ = Promise::new(owner).transfer(extra);
+            let _ = self.pay(owner, extra);
         }
         id
+    }
+
+    // ---- payouts ----
+
+    /// Runs after every payment the contract sends. If the transfer did not
+    /// arrive, the amount is recorded as owed so it can be claimed later.
+    #[private]
+    pub fn on_payout(&mut self, account_id: AccountId, amount: NearToken, #[callback_result] result: Result<(), PromiseError>) -> bool {
+        if result.is_ok() {
+            return true;
+        }
+        let total = self.owed.get(&account_id).copied().unwrap_or(NearToken::from_yoctonear(0)).saturating_add(amount);
+        self.owed.insert(account_id.clone(), total);
+        emit("payout_failed", &format!(r#"{{"account_id":"{account_id}","amount":"{}"}}"#, amount.as_yoctonear()));
+        false
+    }
+
+    /// Claims a payment that failed to arrive earlier.
+    pub fn withdraw_owed(&mut self) -> Promise {
+        let caller = env::predecessor_account_id();
+        // Removed before sending, so two calls cannot both be paid.
+        let amount = self.owed.remove(&caller).unwrap_or_else(|| env::panic_str("nothing is owed to this account"));
+        self.pay(caller, amount)
+    }
+
+    pub fn get_owed(&self, account_id: AccountId) -> NearToken {
+        self.owed.get(&account_id).copied().unwrap_or(NearToken::from_yoctonear(0))
     }
 
     // ---- views ----
@@ -170,6 +206,7 @@ impl Contract {
             vehicle_count: self.next_vehicle_id - 1,
             sale_count: self.next_sale_id - 1,
             vehicle_deposit: VEHICLE_DEPOSIT,
+            listing_fee: LISTING_FEE,
         }
     }
 
@@ -200,6 +237,13 @@ impl Contract {
 impl Contract {
     fn assert_admin(&self) {
         require!(env::predecessor_account_id() == self.admin, "only the admin can do this");
+    }
+
+    /// Sends `amount` and checks the result in `on_payout`.
+    pub(crate) fn pay(&self, to: AccountId, amount: NearToken) -> Promise {
+        Promise::new(to.clone())
+            .transfer(amount)
+            .then(Self::ext(env::current_account_id()).with_static_gas(PAYOUT_CALLBACK_GAS).on_payout(to, amount))
     }
 
     pub(crate) fn vehicle(&self, vehicle_id: u64) -> Vehicle {

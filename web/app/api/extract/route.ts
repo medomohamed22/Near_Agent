@@ -1,7 +1,7 @@
 import samples from "@/lib/samples.json";
 import type { ExtractResponse, Extraction, RecordKind } from "@/lib/types";
 import { aiConfigured, extractDocument } from "@/lib/server/ai";
-import { allow, tooMany } from "@/lib/server/ratelimit";
+import { allow, tooLarge, tooMany } from "@/lib/server/ratelimit";
 import { readUpload } from "@/lib/server/upload";
 
 export const maxDuration = 60;
@@ -18,7 +18,9 @@ function fixtureFor(sha256: string, lang: "ar" | "en"): Extraction | null {
 
 /** Reads a document image and proposes its fields. The result is a draft for the uploader to review. */
 export async function POST(request: Request) {
-  if (!allow(request, "extract", 12, 10 * 60_000)) return tooMany();
+  const big = tooLarge(request, 6_000_000);
+  if (big) return big;
+  if (!(await allow(request, "extract"))) return tooMany();
   const form = await request.formData().catch(() => null);
   if (!form) return Response.json({ error: "Malformed request." }, { status: 400 });
   const upload = await readUpload(form);

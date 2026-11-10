@@ -30,7 +30,16 @@ export async function view<T>(method: string, args: Record<string, unknown> = {}
 }
 
 export const getConfig = () => view<ChainConfig>("get_config");
-export const getVehicles = () => view<Vehicle[]>("get_vehicles", { limit: 50 });
+/** Every passport, read page by page (the contract returns at most 50 per call). */
+export async function getVehicles(): Promise<Vehicle[]> {
+  const all: Vehicle[] = [];
+  for (let from = 1; all.length < 1000; from += 50) {
+    const page = await view<Vehicle[]>("get_vehicles", { from, limit: 50 });
+    all.push(...page);
+    if (page.length < 50) break;
+  }
+  return all;
+}
 export const getVehicle = (vehicle_id: number) => view<Vehicle | null>("get_vehicle", { vehicle_id });
 export const getRecords = async (vehicle_id: number) => {
   const first = await view<CarRecord[]>("get_records", { vehicle_id, from: 0, limit: 50 });
@@ -54,17 +63,16 @@ const YOCTO = 10n ** 24n;
 
 /** "2.5" -> yoctoNEAR string. Throws on anything that is not a plain positive decimal. */
 export function parseNear(amount: string): string {
-  const m = /^(\d{1,6})(?:\.(\d{1,5}))?$/.exec(amount.trim());
+  const m = /^(\d{1,6})(?:\.(\d{1,24}))?$/.exec(amount.trim());
   if (!m) throw new Error("amount must be a number like 2 or 2.5");
   const yocto = BigInt(m[1]) * YOCTO + BigInt((m[2] || "").padEnd(24, "0"));
   if (yocto <= 0n) throw new Error("amount must be greater than zero");
   return yocto.toString();
 }
 
-/** yoctoNEAR -> "2.5" with up to 2 decimals. */
+/** yoctoNEAR -> exact decimal NEAR, e.g. "2.5" or "0.00999". Never rounds, so a price is shown as it will be charged. */
 export function formatNear(yocto: string | bigint): string {
   const v = BigInt(yocto);
-  const whole = v / YOCTO;
-  const cents = ((v % YOCTO) * 100n) / YOCTO;
-  return cents === 0n ? whole.toString() : `${whole}.${cents.toString().padStart(2, "0").replace(/0$/, "")}`;
+  const fraction = (v % YOCTO).toString().padStart(24, "0").replace(/0+$/, "");
+  return fraction ? `${v / YOCTO}.${fraction}` : (v / YOCTO).toString();
 }

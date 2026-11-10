@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { ROLES } from "@/lib/config";
 import { relay, RelayError } from "@/lib/server/near";
-import { allow, tooMany } from "@/lib/server/ratelimit";
+import { allow, tooLarge, tooMany } from "@/lib/server/ratelimit";
 
 export const maxDuration = 60;
 
@@ -13,7 +13,9 @@ const Body = z.object({
 
 /** Guest mode: signs one allowed contract call with a demo testnet account. */
 export async function POST(request: Request) {
-  if (!allow(request, "relay", 30, 10 * 60_000)) return tooMany();
+  const big = tooLarge(request, 20_000);
+  if (big) return big;
+  if (!(await allow(request, "relay"))) return tooMany();
   const parsed = Body.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return Response.json({ ok: false, error: "Malformed request." }, { status: 400 });
   try {

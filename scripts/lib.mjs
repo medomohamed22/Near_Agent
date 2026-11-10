@@ -14,7 +14,7 @@ export const WASM_FILE = fileURLToPath(
 /** Role -> account id. Override the prefix to deploy a fresh set of accounts. */
 export function accountIds(prefix = process.env.CARPASS_PREFIX || 'carpass') {
   return {
-    contract: process.env.CARPASS_CONTRACT || `${prefix}-v2.testnet`,
+    contract: process.env.CARPASS_CONTRACT || `${prefix}-v3.testnet`,
     admin: `${prefix}-admin.testnet`,
     seller: `${prefix}-seller.testnet`,
     buyer: `${prefix}-buyer.testnet`,

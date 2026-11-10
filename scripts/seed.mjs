@@ -45,7 +45,8 @@ if ((await view('get_config')).vehicle_count > 0) {
   process.exit(0);
 }
 
-const DEPOSIT = '100000000000000000000000'; // 0.1 NEAR
+const DEPOSIT = '100000000000000000000000'; // 0.1 NEAR, the passport's storage deposit
+const LISTING_FEE = '10000000000000000000000'; // 0.01 NEAR
 // The VINs are made up. Same salted hash as web/lib/hash.ts.
 const vin = (v) => sha256(`carpass:vin:${v}`);
 
@@ -54,7 +55,7 @@ const first = await addSample('seller', corolla, 'corolla-2022-service.png');
 await call('workshop', 'attest_record', { vehicle_id: corolla, index: first.index });
 await addSample('workshop', corolla, 'corolla-2023-inspection.png');
 await addSample('seller', corolla, 'corolla-2024-service.png');
-await call('seller', 'list_for_sale', { vehicle_id: corolla, price: '2000000000000000000000000' });
+await call('seller', 'list_for_sale', { vehicle_id: corolla, price: '2000000000000000000000000' }, LISTING_FEE);
 
 const elantra = await call('seller', 'create_vehicle', { label: 'Hyundai Elantra 2016', vin_hash: vin('DEMO0ELANTRA2016X') }, DEPOSIT);
 await addSample('workshop', elantra, 'elantra-2021-accident-repair.png');

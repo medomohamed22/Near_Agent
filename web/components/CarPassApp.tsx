@@ -2,8 +2,8 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { fetchDocuments, relayCall } from "@/lib/api";
-import { getConfig, getRecords, getSale, getSellerStats, getVehicles, parseNear, view } from "@/lib/chain";
-import { CONTRACT_ID, DEMO_ACCOUNTS, ROLES, accountUrl, txUrl, type Role } from "@/lib/config";
+import { formatNear, getConfig, getRecords, getSale, getSellerStats, getVehicle, getVehicles, parseNear, view } from "@/lib/chain";
+import { CONTRACT_ID, DEMO_ACCOUNTS, ROLES, VEHICLE_DEPOSIT_NEAR, accountUrl, inDemoScope, txUrl, type Role } from "@/lib/config";
 import { vinHash } from "@/lib/hash";
 import { dict, type Key } from "@/lib/i18n";
 import { useLang, useTheme } from "@/lib/prefs";
@@ -21,10 +21,11 @@ import { Account, Busy, Notice } from "./ui";
 const Car3D = dynamic(() => import("./Car3D"), { ssr: false, loading: () => <div className="grid h-full place-items-center"><span className="spinner" /></div> });
 
 type Tx = { id: number; label: string; status: "pending" | "success" | "failed"; hash?: string; error?: string };
-type Detail = { records: CarRecord[]; docs: Record<string, Extraction>; sale: Sale | null; stats: SellerStats };
+type Detail = { vehicleId: number; records: CarRecord[]; docs: Record<string, Extraction>; sale: Sale | null; stats: SellerStats };
 type Health = { ai: { live: boolean } };
 
-const VEHICLE_DEPOSIT = parseNear("0.1");
+const VEHICLE_DEPOSIT = parseNear(VEHICLE_DEPOSIT_NEAR);
+const OPEN_SALE = ["Listed", "Funded", "HandedOver", "Disputed"];
 const i = (n: number) => ({ "--i": n }) as CSSProperties;
 
 const Sun = () => (
@@ -56,6 +57,10 @@ export default function CarPassApp() {
   const [creating, setCreating] = useState(false);
   const [health, setHealth] = useState<Health | null>(null);
   const [scrolled, setScrolled] = useState(false);
+  const [notFound, setNotFound] = useState(false);
+  const [owed, setOwed] = useState("0");
+  /** The passport on screen, so a slow answer for another passport is ignored. */
+  const selectedRef = useRef<number | null>(null);
   /** Last sale seen per passport, so a sale stays on screen after it closes. */
   const lastSale = useRef(new Map<number, number>());
   const txId = useRef(0);
@@ -65,10 +70,15 @@ export default function CarPassApp() {
   // Who is acting. A connected wallet is the person's own account; otherwise
   // the visitor plays one of the shared guest accounts.
   const me = wallet ?? DEMO_ACCOUNTS[role];
-  const canTrade = wallet ? true : role === "seller" || role === "buyer";
-  const isWorkshop = wallet ? walletIsWorkshop : role === "workshop";
-  const isReviewer = wallet ? wallet === admin : role === "reviewer";
   const vehicle = vehicles?.find((v) => v.id === selected) ?? null;
+  // Details belong to one passport; while they are for another, nothing is shown or actionable.
+  const current = detail && vehicle && detail.vehicleId === vehicle.id ? detail : null;
+  const openSale = current?.sale && OPEN_SALE.includes(current.sale.status) ? current.sale : null;
+  // Guest accounts act only inside the demo: demo-held passports and demo-only sales.
+  const guestBlocked = !wallet && !!vehicle && !inDemoScope(vehicle.owner, openSale);
+  const canTrade = wallet ? true : (role === "seller" || role === "buyer") && !guestBlocked;
+  const isWorkshop = wallet ? walletIsWorkshop : role === "workshop" && !guestBlocked;
+  const isReviewer = wallet ? wallet === admin : role === "reviewer" && !guestBlocked;
 
   const loadVehicles = useCallback(async () => {
     try {
@@ -94,7 +104,8 @@ export default function CarPassApp() {
       ]);
       // The score describes whoever is selling: the seller of the sale on screen, else the holder.
       const sellerStats = sale && sale.seller !== v.owner ? await getSellerStats(sale.seller) : stats;
-      setDetail({ records, docs, sale, stats: sellerStats });
+      if (selectedRef.current !== v.id) return; // another passport was opened meanwhile
+      setDetail({ vehicleId: v.id, records, docs, sale, stats: sellerStats });
       setLoadError(false);
     } catch {
       setLoadError(true);
@@ -105,10 +116,16 @@ export default function CarPassApp() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const wanted = Number(params.get("v")) || null;
-    if (params.get("confirm")) setRole("buyer");
-    loadVehicles().then((list) => {
-      if (!list?.length) return;
-      setSelected(list.find((v) => v.id === wanted)?.id ?? list[0].id);
+    if (params.get("confirm") && wanted !== null) setRole("buyer");
+    const pick = (id: number) => { selectedRef.current = id; setSelected(id); };
+    loadVehicles().then(async (list) => {
+      if (!list) return;
+      if (wanted === null) { if (list.length) pick(list[0].id); return; }
+      // A link names one passport: open exactly that one, or say it does not exist.
+      const linked = list.find((v) => v.id === wanted) ?? (await getVehicle(wanted).catch(() => null));
+      if (!linked) { setNotFound(true); return; }
+      if (!list.some((v) => v.id === linked.id)) setVehicles([...list, linked]);
+      pick(linked.id);
     });
     getConfig().then((c) => setAdmin(c.admin)).catch(() => undefined);
     fetch("/api/health").then((r) => r.json()).then(setHealth).catch(() => setHealth(null));
@@ -136,10 +153,19 @@ export default function CarPassApp() {
 
   const open = (id: number) => {
     if (id === selected) return;
+    selectedRef.current = id;
     setDetail(null);
     setFilter(null);
+    setNotFound(false);
     setSelected(id);
   };
+
+  // A payment the contract could not deliver earlier stays claimable.
+  useEffect(() => {
+    let live = true;
+    view<string>("get_owed", { account_id: me }).then((v) => { if (live) setOwed(v); }).catch(() => undefined);
+    return () => { live = false; };
+  }, [me, txs]);
   const loaded = vehicles !== null;
   useEffect(() => {
     const v = vehicles?.find((x) => x.id === selected);
@@ -187,7 +213,7 @@ export default function CarPassApp() {
     setTimeout(() => setFlash(null), 1800);
   };
 
-  const records = detail?.records;
+  const records = current?.records;
   const zones: Zone[] = useMemo(() => {
     const count = (kinds: RecordKind[]) => (records ?? []).filter((r) => kinds.includes(r.kind)).length;
     const conflict = (records ?? []).some((r) => r.odometer_conflict);
@@ -200,7 +226,7 @@ export default function CarPassApp() {
     ];
   }, [records, lang]);
 
-  const trust = vehicle && detail ? trustScore(vehicle, detail.stats) : null;
+  const trust = vehicle && current ? trustScore(vehicle, current.stats, current.records) : null;
   const isHolder = !!vehicle && vehicle.owner === me;
 
   return (
@@ -269,6 +295,11 @@ export default function CarPassApp() {
           <Notice tone="danger">{t("loadError")} <button type="button" className="underline" onClick={refresh}>{t("retry")}</button></Notice>
         )}
 
+        {notFound && <Notice tone="warn">{t("notFound")}</Notice>}
+        {owed !== "0" && (
+          <Notice tone="warn">{t("owedNote")} <span className="ltr">{formatNear(owed)} NEAR</span> · <button type="button" className="underline" onClick={() => act(t("claimOwed"), "withdraw_owed", {})}>{t("claimOwed")}</button></Notice>
+        )}
+
         <nav className="reveal flex flex-wrap items-center gap-2" style={i(2)} aria-label={t("passports")}>
           <span className="text-sm font-semibold">{t("passports")}</span>
           {vehicles === null && !loadError && <span className="spinner" />}
@@ -292,7 +323,7 @@ export default function CarPassApp() {
           }} />
         )}
 
-        {vehicle && trust && detail && (
+        {vehicle && trust && current && (
           <>
             <section className="grid gap-6 lg:grid-cols-[minmax(0,430px)_1fr]">
               <div className="space-y-5">
@@ -307,7 +338,10 @@ export default function CarPassApp() {
                   <ul className="mt-3 space-y-2.5">
                     {trust.parts.map((p) => (
                       <li key={p.key}>
-                        <div className="flex justify-between text-sm"><span>{t(`part_${p.key}` as Key)}</span><span className="ltr muted">{p.points} / {p.max}</span></div>
+                        <div className="flex justify-between gap-2 text-sm">
+                          <span>{t(`part_${p.key}` as Key)}{p.insufficient && <span className="muted"> · {t("insufficient")}</span>}</span>
+                          <span className="ltr muted">{p.points} / {p.max}</span>
+                        </div>
                         <div className="bar mt-1" role="presentation"><i style={{ width: `${(p.points / p.max) * 100}%` }} /></div>
                       </li>
                     ))}
@@ -330,16 +364,18 @@ export default function CarPassApp() {
               </div>
             </section>
 
-            <SalePanel t={t} vehicle={vehicle} sale={detail.sale} stats={detail.stats} me={me} canTrade={canTrade} isReviewer={isReviewer}
+            {guestBlocked && <Notice>{t("guestOnlyView")}</Notice>}
+
+            <SalePanel t={t} vehicle={vehicle} sale={current.sale} stats={current.stats} me={me} canTrade={canTrade} isReviewer={isReviewer}
               act={async (label, method, args, deposit) => { await act(`${t("sale")}: ${label}`, method, args, deposit); }} />
 
             <div className="grid gap-6 lg:grid-cols-[1fr_minmax(0,380px)]">
               <div className="space-y-6">
-                <Timeline t={t} vehicleId={vehicle.id} records={detail.records} docs={detail.docs}
+                <Timeline t={t} vehicleId={vehicle.id} records={current.records} docs={current.docs}
                   filter={filter?.kinds ?? null} onFilter={(kinds) => setFilter(kinds ? { kinds, zone: null } : null)}
                   canAttest={isWorkshop && !isHolder} flash={flash}
                   onAttest={async (index) => { await act(`${t("attest")} #${index + 1}`, "attest_record", { vehicle_id: vehicle.id, index }); }} />
-                <AddRecord t={t} lang={lang} vehicleId={vehicle.id} records={detail.records} allowed={isHolder || isWorkshop}
+                <AddRecord t={t} lang={lang} vehicleId={vehicle.id} records={current.records} allowed={isHolder || isWorkshop}
                   onSubmit={async (a) => {
                     const out = await act(`${t("addRecord")}: ${t(`kind_${a.kind}` as Key)}`, "add_record", { vehicle_id: vehicle.id, ...a });
                     if (out === null) throw new Error(t("failed"));
@@ -370,7 +406,7 @@ export default function CarPassApp() {
             </div>
           </>
         )}
-        {vehicle && !detail && !loadError && <div className="card grid place-items-center py-20"><span className="spinner" /></div>}
+        {vehicle && !current && !loadError && <div className="card grid place-items-center py-20"><span className="spinner" /></div>}
       </main>
 
       <footer className="mt-12 space-y-2 border-t border-line pt-5 text-xs muted">

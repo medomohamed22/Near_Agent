@@ -1,0 +1,7 @@
+# near-sdk only calls the NEAR host functions (including the one that carries
+# a panic message) when built with `--cfg near`. cargo-near sets it; this makes
+# a plain `cargo build --target wasm32-unknown-unknown --release` do the same.
+# Without it a failed check still reverts, but the caller sees only
+# "WebAssembly trap: unreachable" instead of the contract's message.
+[target.wasm32-unknown-unknown]
+rustflags = ["--cfg", "near"]

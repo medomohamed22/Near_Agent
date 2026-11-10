@@ -25,7 +25,7 @@ pub struct Record {
     pub added_by: AccountId,
     /// Workshop that vouched for this record; never the passport holder.
     pub attested_by: Option<AccountId>,
-    /// The reading disagrees with the car's other readings. The record is kept
+    /// The reading disagrees with another reading on the passport. The record is kept
     /// and flagged; the contract does not decide which reading is wrong.
     pub odometer_conflict: bool,
     pub created_at_ms: u64,
@@ -54,25 +54,30 @@ impl Contract {
             require!(km <= 2_000_000, "odometer_km is out of range");
         }
 
+        // Compare against every other clean reading on the passport, whatever
+        // order the documents were added in: an earlier-dated document must
+        // not show more kilometres, a later-dated one must not show fewer.
+        // Readings dated the same day are not compared with each other.
         let mut conflict = false;
-        if let Some(km) = odometer_km {
-            if vehicle.last_odometer_date == 0 {
-                vehicle.last_odometer_km = km;
-                vehicle.last_odometer_date = event_date;
-            } else if event_date >= vehicle.last_odometer_date {
-                // A later document must not show fewer kilometres.
-                conflict = km < vehicle.last_odometer_km;
-                if !conflict {
-                    vehicle.last_odometer_km = km;
-                    vehicle.last_odometer_date = event_date;
+        for i in 0..vehicle.record_count {
+            let other = self.records.get(&(vehicle_id, i)).unwrap_or_else(|| env::panic_str("record missing"));
+            require!(other.doc_hash != doc_hash, "this document is already on this passport");
+            if let (Some(km), Some(other_km), false) = (odometer_km, other.odometer_km, other.odometer_conflict) {
+                if (other.event_date < event_date && other_km > km) || (other.event_date > event_date && other_km < km) {
+                    conflict = true;
                 }
-            } else {
-                // An earlier document must not show more kilometres.
-                conflict = km > vehicle.last_odometer_km;
             }
         }
-        if conflict {
-            vehicle.odometer_conflicts += 1;
+        if let Some(km) = odometer_km {
+            if conflict {
+                vehicle.odometer_conflicts += 1;
+            } else if vehicle.last_odometer_date == 0
+                || event_date > vehicle.last_odometer_date
+                || (event_date == vehicle.last_odometer_date && km > vehicle.last_odometer_km)
+            {
+                vehicle.last_odometer_km = km;
+                vehicle.last_odometer_date = event_date;
+            }
         }
 
         let index = vehicle.record_count;

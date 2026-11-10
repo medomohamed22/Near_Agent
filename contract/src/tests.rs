@@ -5,6 +5,7 @@ use near_sdk::testing_env;
 
 const HASH_A: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const HASH_B: &str = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+const HASH_C: &str = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc";
 const TIMEOUT_SEC: u64 = 120;
 const START_NS: u64 = 1_800_000_000_000_000_000;
 
@@ -58,9 +59,14 @@ fn setup() -> Contract {
     c
 }
 
+/// The seller, attaching the listing fee.
+fn listing(who: &str) {
+    call_as(who, LISTING_FEE, 0);
+}
+
 fn listed() -> Contract {
     let mut c = setup();
-    free("seller");
+    listing("seller");
     assert_eq!(c.list_for_sale(1, price()), 1);
     c
 }
@@ -116,8 +122,8 @@ fn odometer_rollback_is_flagged_not_rejected() {
     let mut c = setup();
     free("seller");
     assert!(!c.add_record(1, RecordKind::Maintenance, HASH_A.into(), 20230101, Some(10_000)).odometer_conflict);
-    assert!(!c.add_record(1, RecordKind::Maintenance, HASH_A.into(), 20240101, Some(12_000)).odometer_conflict);
-    assert!(c.add_record(1, RecordKind::Inspection, HASH_B.into(), 20250101, Some(11_500)).odometer_conflict);
+    assert!(!c.add_record(1, RecordKind::Maintenance, HASH_B.into(), 20240101, Some(12_000)).odometer_conflict);
+    assert!(c.add_record(1, RecordKind::Inspection, HASH_C.into(), 20250101, Some(11_500)).odometer_conflict);
     let v = c.get_vehicle(1).unwrap();
     assert_eq!(v.odometer_conflicts, 1);
     assert_eq!(v.last_odometer_km, 12_000, "the conflicting reading must not replace the last good one");
@@ -130,8 +136,48 @@ fn backdated_higher_reading_is_flagged() {
     let mut c = setup();
     free("seller");
     c.add_record(1, RecordKind::Odometer, HASH_A.into(), 20240101, Some(50_000));
-    assert!(c.add_record(1, RecordKind::Odometer, HASH_A.into(), 20230101, Some(60_000)).odometer_conflict);
-    assert!(!c.add_record(1, RecordKind::Odometer, HASH_A.into(), 20230601, Some(40_000)).odometer_conflict);
+    assert!(c.add_record(1, RecordKind::Odometer, HASH_B.into(), 20230101, Some(60_000)).odometer_conflict);
+    assert!(!c.add_record(1, RecordKind::Odometer, HASH_C.into(), 20230601, Some(40_000)).odometer_conflict);
+}
+
+/// 100k in 2022, 130k in 2024, 90k in 2023: the 2023 reading is a rollback
+/// against 2022, in whatever order the three documents are added.
+#[test]
+fn rollback_is_caught_in_every_entry_order() {
+    let readings = [(20220101u32, 100_000u32, HASH_A), (20240101, 130_000, HASH_B), (20230101, 90_000, HASH_C)];
+    let orders = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]];
+    for order in orders {
+        // Each order runs on its own thread, so it starts from empty contract storage.
+        std::thread::spawn(move || {
+            let mut c = setup();
+            free("seller");
+            for i in order {
+                let (date, km, hash) = readings[i];
+                c.add_record(1, RecordKind::Odometer, hash.into(), date, Some(km));
+            }
+            assert_eq!(c.get_vehicle(1).unwrap().odometer_conflicts, 1, "order {order:?}");
+        })
+        .join()
+        .unwrap();
+    }
+}
+
+#[test]
+fn same_day_readings_are_not_compared() {
+    let mut c = setup();
+    free("seller");
+    c.add_record(1, RecordKind::Odometer, HASH_A.into(), 20240101, Some(50_000));
+    assert!(!c.add_record(1, RecordKind::Odometer, HASH_B.into(), 20240101, Some(49_990)).odometer_conflict);
+    assert_eq!(c.get_vehicle(1).unwrap().last_odometer_km, 50_000);
+}
+
+#[test]
+#[should_panic(expected = "already on this passport")]
+fn same_document_cannot_be_added_twice() {
+    let mut c = setup();
+    free("seller");
+    c.add_record(1, RecordKind::Maintenance, HASH_A.into(), 20240101, None);
+    c.add_record(1, RecordKind::Inspection, HASH_A.into(), 20240201, None);
 }
 
 #[test]
@@ -265,7 +311,7 @@ fn new_holder_can_relist() {
     let mut c = funded();
     free("buyer");
     let _ = c.confirm_receipt(1);
-    free("buyer");
+    listing("buyer");
     assert_eq!(c.list_for_sale(1, price()), 2);
     assert_eq!(c.get_sales(None, None).len(), 2);
 }
@@ -276,7 +322,7 @@ fn new_holder_can_relist() {
 #[should_panic(expected = "only the passport holder can list")]
 fn only_holder_lists() {
     let mut c = setup();
-    free("buyer");
+    listing("buyer");
     c.list_for_sale(1, price());
 }
 
@@ -284,7 +330,7 @@ fn only_holder_lists() {
 #[should_panic(expected = "already has an open sale")]
 fn one_open_sale_per_car() {
     let mut c = listed();
-    free("seller");
+    listing("seller");
     c.list_for_sale(1, price());
 }
 
@@ -292,7 +338,7 @@ fn one_open_sale_per_car() {
 #[should_panic(expected = "price must be greater than zero")]
 fn price_cannot_be_zero() {
     let mut c = setup();
-    free("seller");
+    listing("seller");
     c.list_for_sale(1, NearToken::from_near(0));
 }
 
@@ -560,4 +606,60 @@ fn reviewer_cannot_settle_twice() {
     let _ = c.resolve_dispute(1, true);
     free("admin");
     let _ = c.resolve_dispute(1, false);
+}
+
+// ---- listing fee and failed payouts ----
+
+#[test]
+#[should_panic(expected = "attach 0.01 NEAR")]
+fn listing_needs_its_storage_fee() {
+    let mut c = setup();
+    free("seller");
+    c.list_for_sale(1, price());
+}
+
+#[test]
+fn listing_refunds_what_exceeds_the_fee() {
+    let mut c = setup();
+    call_as("seller", NearToken::from_millinear(60), 0);
+    c.list_for_sale(1, price());
+    assert_eq!(paid_to("seller"), NearToken::from_millinear(50));
+}
+
+#[test]
+fn a_payment_that_does_not_arrive_becomes_owed_and_can_be_claimed_once() {
+    let mut c = funded();
+    free("buyer");
+    let _ = c.confirm_receipt(1);
+    assert_eq!(status(&c), SaleStatus::Completed);
+
+    // The transfer to the seller fails: the callback records the debt.
+    free("carpass");
+    assert!(!c.on_payout(acc("seller"), price(), Err(PromiseError::Failed)));
+    assert_eq!(c.get_owed(acc("seller")), price());
+
+    free("seller");
+    let _ = c.withdraw_owed();
+    assert_eq!(paid_to("seller"), price());
+    assert_eq!(c.get_owed(acc("seller")), nothing());
+}
+
+#[test]
+#[should_panic(expected = "nothing is owed")]
+fn owed_cannot_be_claimed_twice() {
+    let mut c = funded();
+    free("carpass");
+    c.on_payout(acc("seller"), price(), Err(PromiseError::Failed));
+    free("seller");
+    let _ = c.withdraw_owed();
+    free("seller");
+    let _ = c.withdraw_owed();
+}
+
+#[test]
+fn a_delivered_payment_leaves_nothing_owed() {
+    let mut c = funded();
+    free("carpass");
+    assert!(c.on_payout(acc("seller"), price(), Ok(())));
+    assert_eq!(c.get_owed(acc("seller")), nothing());
 }

@@ -39,12 +39,16 @@ pub struct Sale {
 
 #[near]
 impl Contract {
+    /// Offers the car for sale. Attach `LISTING_FEE`; anything above it is refunded.
+    #[payable]
     pub fn list_for_sale(&mut self, vehicle_id: u64, price: NearToken) -> u64 {
         let seller = env::predecessor_account_id();
         let mut vehicle = self.vehicle(vehicle_id);
         require!(seller == vehicle.owner, "only the passport holder can list the car");
         require!(vehicle.active_sale.is_none(), "this car already has an open sale");
         require!(!price.is_zero(), "price must be greater than zero");
+        let attached = env::attached_deposit();
+        require!(attached >= LISTING_FEE, "attach 0.01 NEAR to cover the listing's storage");
 
         let id = self.next_sale_id;
         self.next_sale_id += 1;
@@ -68,6 +72,10 @@ impl Contract {
         vehicle.active_sale = Some(id);
         self.vehicles.insert(vehicle_id, vehicle);
         emit("sale_listed", &format!(r#"{{"sale_id":{id},"vehicle_id":{vehicle_id},"seller":"{seller}"}}"#));
+        let extra = attached.saturating_sub(LISTING_FEE);
+        if !extra.is_zero() {
+            let _ = self.pay(seller, extra);
+        }
         id
     }
 
@@ -219,7 +227,8 @@ impl Contract {
     }
 
     // Both settlement paths write the final state before sending the payment,
-    // so a sale can never pay out twice.
+    // so a sale can never pay out twice. If the payment then fails to arrive,
+    // `on_payout` records it as owed to the recipient.
 
     fn release_to_seller(&mut self, mut sale: Sale) -> Promise {
         let buyer = sale.buyer.clone().unwrap_or_else(|| env::panic_str("sale has no buyer"));
@@ -232,7 +241,7 @@ impl Contract {
         sale.status = SaleStatus::Completed;
         self.save_stage(sale, false);
         emit("sale_completed", &format!(r#"{{"sale_id":{sale_id},"seller":"{seller}","buyer":"{buyer}"}}"#));
-        Promise::new(seller).transfer(price)
+        self.pay(seller, price)
     }
 
     fn refund_buyer(&mut self, mut sale: Sale) -> Promise {
@@ -242,6 +251,6 @@ impl Contract {
         sale.status = SaleStatus::Refunded;
         self.save_stage(sale, false);
         emit("sale_refunded", &format!(r#"{{"sale_id":{sale_id},"buyer":"{buyer}"}}"#));
-        Promise::new(buyer).transfer(price)
+        self.pay(buyer, price)
     }
 }

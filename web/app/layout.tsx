@@ -22,7 +22,7 @@ export const viewport: Viewport = {
 // flashes the wrong one. Without a saved choice it stays light and English.
 const boot = `try{var t=localStorage.getItem("carpass-theme"),l=localStorage.getItem("carpass-lang"),d=document.documentElement;if(t==="dark")d.dataset.theme="dark";if(l==="ar"){d.lang="ar";d.dir="rtl"}}catch(e){}`;
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" dir="ltr" data-theme="light" className={`${inter.variable} ${arabic.variable} antialiased`} suppressHydrationWarning>
       <head>

@@ -1,22 +1,19 @@
 import type { CarRecord } from "./types";
 
 /**
- * Mirrors the contract's rule so the form can warn before signing: a later
- * document must not show fewer kilometres, an earlier one must not show more.
- * The contract keeps the record either way and flags it.
+ * Mirrors the contract's rule so the form can warn before signing. The new
+ * reading is compared with every clean reading already on the passport: an
+ * earlier-dated document must not show more kilometres, a later-dated one must
+ * not show fewer. Readings dated the same day are not compared. The contract
+ * keeps the record either way and flags it.
  */
 export function wouldConflict(records: CarRecord[], eventDate: number, km: number): boolean {
-  let lastKm = 0;
-  let lastDate = 0;
-  for (const r of records) {
-    if (r.odometer_km == null || r.odometer_conflict) continue;
-    if (lastDate === 0 || r.event_date >= lastDate) {
-      lastKm = r.odometer_km;
-      lastDate = r.event_date;
-    }
-  }
-  if (lastDate === 0) return false;
-  return eventDate >= lastDate ? km < lastKm : km > lastKm;
+  return records.some(
+    (r) =>
+      r.odometer_km != null &&
+      !r.odometer_conflict &&
+      ((r.event_date < eventDate && r.odometer_km > km) || (r.event_date > eventDate && r.odometer_km < km)),
+  );
 }
 
 /** 20240131 -> "2024-01-31". */

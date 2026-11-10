@@ -2,6 +2,7 @@
 import QRCode from "qrcode";
 import { useEffect, useState } from "react";
 import { formatNear, parseNear } from "@/lib/chain";
+import { LISTING_FEE_NEAR } from "@/lib/config";
 import { sha256Hex } from "@/lib/hash";
 import type { Key } from "@/lib/i18n";
 import type { Sale, SaleStatus, SellerStats, Vehicle } from "@/lib/types";
@@ -113,7 +114,7 @@ export default function SalePanel({ t, vehicle, sale, stats, me, canTrade, isRev
           <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
             <div className="card-2">
               <dt className="muted">{["Funded", "HandedOver", "Disputed"].includes(sale.status) ? t("held") : t("price")}</dt>
-              <dd className="text-xl font-bold"><span className="ltr text-xl">{formatNear(sale.price)}</span> <span className="text-sm font-normal muted">NEAR</span></dd>
+              <dd className="text-xl font-bold"><span className="ltr break-all text-xl">{formatNear(sale.price)}</span> <span className="text-sm font-normal muted">NEAR</span></dd>
             </div>
             <div className="card-2"><dt className="muted">{t("sellerLbl")}{isSeller ? ` (${t("you")})` : ""}</dt><dd><Account id={sale.seller} /></dd></div>
             <div className="card-2"><dt className="muted">{t("buyerLbl")}{isBuyer ? ` (${t("you")})` : ""}</dt><dd>{sale.buyer ? <Account id={sale.buyer} /> : "—"}</dd></div>
@@ -162,12 +163,13 @@ export default function SalePanel({ t, vehicle, sale, stats, me, canTrade, isRev
         <div className="mt-3">
           {!sale && <p className="muted">{t("notForSale")}</p>}
           {isHolder && canTrade && (
-            <form className="mt-3 flex flex-wrap items-end gap-2" onSubmit={(e) => { e.preventDefault(); if (!priceError) run("list", "list", "list_for_sale", { vehicle_id: vehicle.id, price: priceYocto }); }}>
+            <form className="mt-3 flex flex-wrap items-end gap-2" onSubmit={(e) => { e.preventDefault(); if (!priceError) run("list", "list", "list_for_sale", { vehicle_id: vehicle.id, price: priceYocto }, parseNear(LISTING_FEE_NEAR)); }}>
               <div>
                 <label className="label" htmlFor="sale-price">{t("price")}</label>
                 <input id="sale-price" className="input ltr w-32" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} aria-invalid={!!priceError} />
               </div>
               <button className="btn btn-primary" disabled={!!busy || !!priceError}><Busy on={busy === "list"}>{t("list")}</Busy></button>
+              <p className="basis-full text-xs muted">{t("listFee")}</p>
             </form>
           )}
         </div>

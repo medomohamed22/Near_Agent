@@ -27,8 +27,9 @@ export default function AddRecord({ t, lang, vehicleId, records, allowed, onSubm
   const [draft, setDraft] = useState<Draft | null>(null);
   const [phase, setPhase] = useState<"idle" | "reading" | "saving">("idle");
   const [error, setError] = useState("");
+  const [consent, setConsent] = useState(false);
 
-  const reset = () => { setFile(null); setRead(null); setDraft(null); setError(""); setPreview((p) => { if (p) URL.revokeObjectURL(p); return ""; }); if (input.current) input.current.value = ""; };
+  const reset = () => { setFile(null); setRead(null); setDraft(null); setError(""); setConsent(false); setPreview((p) => { if (p) URL.revokeObjectURL(p); return ""; }); if (input.current) input.current.value = ""; };
 
   const start = async (f: File) => {
     reset();
@@ -152,8 +153,14 @@ export default function AddRecord({ t, lang, vehicleId, records, allowed, onSubm
                 </div>
                 <p className="mt-3 text-sm"><span className="muted">{t("docHash")}: </span><Mono value={read.sha256} short /></p>
                 {conflict && <div className="mt-2"><Notice tone="warn">⚠ {t("willConflict")}</Notice></div>}
-                <p className="mt-2 text-xs muted">{t("publicNote")}</p>
-                <button type="button" className="btn btn-primary mt-3" disabled={phase !== "idle"} onClick={submit}>
+                <div className="card-2 mt-3 text-sm">
+                  <p className="font-semibold text-warn">⚠ {t("publicNote")}</p>
+                  <label className="mt-2 flex cursor-pointer items-start gap-2">
+                    <input type="checkbox" className="mt-1 h-4 w-4 shrink-0 accent-[var(--brand)]" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+                    <span>{t("publicConsent")}</span>
+                  </label>
+                </div>
+                <button type="button" className="btn btn-primary mt-3" disabled={phase !== "idle" || !consent} onClick={submit}>
                   <Busy on={phase === "saving"}>{t("record")}</Busy>
                 </button>
               </div>

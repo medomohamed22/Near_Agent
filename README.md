@@ -52,11 +52,8 @@ A two-minute tour:
 | | |
 |---|---|
 | Network | NEAR testnet |
-| Contract | [`carpass-v2.testnet`](https://testnet.nearblocks.io/address/carpass-v2.testnet) |
-| Deploy | [`Dhw9vpDi…`](https://testnet.nearblocks.io/txns/Dhw9vpDivVdxVTZzpWjDAtBWMVCXrwmqH41CaGe8ehyG) |
-| Sample record added | [`9h8k753s…`](https://testnet.nearblocks.io/txns/9h8k753sg7NzgJYoXzgUR2PXVD3GXw22JJxMSoZf1Fqp) |
-| Workshop attestation | [`CyKjvLqN…`](https://testnet.nearblocks.io/txns/CyKjvLqNhjZwJWeoVqxrtbvbJmKCKgFSFq4ZMk7Q4tct) |
-| Listing | [`FNmBuVqe…`](https://testnet.nearblocks.io/txns/FNmBuVqejwo3a6PE73bUcXfSvhjQoi1Bxzut7xRf3jCU) |
+| Contract | [`carpass-v3.testnet`](https://testnet.nearblocks.io/address/carpass-v3.testnet) |
+| Deploy | [`EtcbL2eD…`](https://testnet.nearblocks.io/txns/EtcbL2eDzkzC2GW1AUyBKBi9uFtgB6r33CLqMWHYXHzA) |
 
 The contract stores document hashes, dates, odometer readings, account ids and sale state. It never stores a VIN (only a salted hash), a name, a file or any other personal data.
 
@@ -77,7 +74,11 @@ stateDiagram-v2
   Disputed --> Refunded: resolve_dispute (to buyer)
 ```
 
-Every settlement writes the final state before it sends the payment, so a sale cannot pay out twice. The demo contract uses a two-minute stage timeout so `claim_timeout` can be shown live.
+Every settlement writes the final state before it sends the payment, so a sale cannot pay out twice. Each payment is followed by a callback: if the transfer did not arrive, the amount is recorded as owed to the recipient, who can claim it with `withdraw_owed`. Listing costs 0.01 NEAR, which pays for the sale record's storage. The demo contract uses a two-minute stage timeout so `claim_timeout` can be shown live.
+
+### Odometer rule
+
+A new reading is compared with every clean reading already on the passport, whatever order the documents were added in: an earlier-dated document must not show more kilometres and a later-dated one must not show fewer. Readings dated the same day are not compared. A document (by hash) can be registered on a passport only once.
 
 ### Record score
 
@@ -86,7 +87,7 @@ A fixed formula over on-chain numbers, shown with its breakdown. It measures how
 ```
 40 × workshop-confirmed records / all records
 + 25 × min(records / 6, 1)
-+ 20 if there is no odometer conflict
++ 20 if at least two odometer readings exist and none conflict ("not enough readings" otherwise)
 + 15 × min(seller's completed sales / 3, 1)
 ```
 
@@ -109,12 +110,19 @@ flowchart LR
   B -- /api/documents --> S[(Supabase · private storage)]
 ```
 
-- `contract/` — Rust, `near-sdk` 5. Passports, records, attestations, escrowed sale. 49 unit tests.
+- `contract/` — Rust, `near-sdk` 5. Passports, records, attestations, escrowed sale. 57 unit tests.
 - `web/` — Next.js (App Router), TypeScript, Tailwind, React Three Fiber, NEAR Connect. English and Arabic (RTL), light and dark themes.
-- `scripts/` — deploy the contract, seed the demo, regenerate the sample documents.
+- `scripts/` — deploy the contract, seed the demo, run the testnet smoke test, regenerate the sample documents.
+- `supabase/migrations/` — the database schema, row-level security and rate-limit counters.
 - `docs/PLAN.md` — the build plan (Arabic).
 
-A stored document is only ever served if its hash is registered on chain for that passport, so the contract decides what belongs to a car, not the upload endpoint.
+### Who can change what
+
+- **Guest accounts stay inside the demo.** The server signs for a guest only on passports held by a demo account and sales whose parties are all demo accounts, and caps guest prices at 3 NEAR. It checks this, and works out any deposit, from on-chain data before it signs or moves funds. A wallet owner's passport, sale or dispute cannot be touched from guest mode.
+- **Documents.** An upload is a pending copy that expires after an hour. It is served only once its hash is registered on chain for that passport, which only the holder or an approved workshop can do. From then on the copy and its reviewed fields are frozen. Stored fields are shown only while their type, date and odometer agree with the contract's record.
+- **Published documents are public.** Anyone who opens a passport can view and download its documents; the uploader must confirm this before recording. There is no redacted copy or private original.
+- **VIN.** Only a hash of the VIN is on chain. Anyone who already knows a VIN can compute the same hash and find its passport; that lookup is intended.
+- **Rate limits** are counted in Postgres, shared by all server instances: per client and per service.
 
 ## Run it locally
 
@@ -124,20 +132,22 @@ Requirements: Node 22, Rust with the `wasm32-unknown-unknown` target.
 # 1. Contract
 cd contract
 cargo test
-cargo build --target wasm32-unknown-unknown --release
+cargo build --target wasm32-unknown-unknown --release   # .cargo/config.toml adds `--cfg near`
 
 # 2. Deploy your own copy to testnet (creates accounts through the faucet)
 cd ../scripts
 npm install
 CARPASS_PREFIX=mycarpass node deploy.mjs      # keys are written to scripts/.keys.json (git-ignored)
 
-# 3. Web app
+# 3. Database: apply supabase/migrations/*.sql to a Supabase project and create the server account they describe
+
+# 4. Web app
 cd ../web
 npm install
 cp .env.example .env.local                    # fill in the values; see the comments in the file
 npm run dev
 
-# 4. Seed the sample passports
+# 5. Seed the sample passports
 cd ../scripts
 CARPASS_PREFIX=mycarpass node seed.mjs
 ```
@@ -154,7 +164,9 @@ cd contract && cargo test
 ## Limits
 
 - Wallet signing was checked up to the wallet chooser; a full signed transaction from a real wallet has not been run in an automated test. With a wallet, a workshop or reviewer role applies only if the contract admin approved that account.
-- Guest accounts are shared, so visitors see each other's actions. The server signs only an allow-list of contract methods and decides deposits itself.
+- Guest accounts are shared, so visitors see each other's actions inside the demo.
+- Uploading does not require proof of who is uploading; what protects a passport is that only its holder or a workshop can register the hash. Someone holding the same file could store their own summary for it in the moments before the holder registers it.
+- If a wallet owner buys a demo-held car and a dispute follows, only the contract admin can settle it, not the guest reviewer.
 - A dispute records only the hash of the complaint; the reviewer hears the parties off-chain.
 - Uploads are images (JPEG, PNG, WebP) up to 5 MB. Anyone viewing a passport can open its documents.
 - The contract has no upgrade or migration path; a schema change means a new contract account.
