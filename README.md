@@ -4,6 +4,8 @@
 
 **Live demo: https://carpass-near.vercel.app** — press *Watch the live demo* and the site runs itself.
 
+**Demo video:** [on X](https://x.com/Gamal2248/status/2120133893625876756) · [download (MP4)](https://carpass-near.vercel.app/carpass-demo.mp4)
+
 Buying a used car means trusting a stack of loose invoices and an odometer that may have been rolled back, then handing over money before you are sure. CarPass puts the car's history and the sale on one page:
 
 - **Evidence, not claims.** The seller photographs an invoice or report. An AI proposes the fields and quotes the words in the document that support each one; the seller reviews every field. The document's SHA-256 and the odometer reading go on chain.
