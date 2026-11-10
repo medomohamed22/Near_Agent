@@ -49,6 +49,7 @@ export default function AskPanel({ t, lang, vehicleId, onCite }: Props) {
         {reply && (
           <div className="card-2 pop">
             {reply.source === "offline" && <p className="mb-2"><span className="badge badge-warn">{t("offline")}</span></p>}
+            {reply.note && <p className="mb-2 text-xs text-warn">{reply.note}</p>}
             <p>{reply.answer}</p>
             {reply.citations.length > 0 && (
               <p className="mt-2 flex flex-wrap items-center gap-2 text-sm">

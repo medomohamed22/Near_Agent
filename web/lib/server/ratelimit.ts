@@ -17,7 +17,7 @@ function allowInMemory(key: string, max: number, windowMs: number): boolean {
 }
 
 /** The caller's address as the platform reports it; a client-supplied X-Forwarded-For is the last resort. */
-function clientKey(request: Request): string {
+export function clientKey(request: Request): string {
   const h = request.headers;
   return (
     h.get("x-vercel-forwarded-for")?.split(",")[0].trim() ||

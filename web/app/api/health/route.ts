@@ -1,6 +1,7 @@
 import { CONTRACT_ID, DEMO_ACCOUNTS, NETWORK, type Role } from "@/lib/config";
 import { formatNear, getBalance, getConfig } from "@/lib/chain";
 import { aiConfigured, aiModel } from "@/lib/server/ai";
+import { aiLimits } from "@/lib/server/ai-budget";
 import { configuredRoles } from "@/lib/server/near";
 import { storageConfigured } from "@/lib/server/supabase";
 
@@ -24,7 +25,7 @@ export async function GET() {
     commit: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? "local",
     chain,
     guest: { ready: roles.length === 4, roles, balances_near: balances },
-    ai: { live: aiConfigured(), model: aiModel() },
+    ai: { live: aiConfigured(), model: aiModel(), limits: aiLimits() },
     storage: { live: storageConfigured() },
   });
 }

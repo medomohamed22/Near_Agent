@@ -128,6 +128,7 @@ flowchart LR
 - **Published documents are public.** Anyone who opens a passport can view and download its documents; the uploader must confirm this before recording. There is no redacted copy or private original.
 - **VIN.** Only a hash of the VIN is on chain. Anyone who already knows a VIN can compute the same hash and find its passport; that lookup is intended.
 - **Rate limits** are counted in Postgres, shared by all server instances: per client and per service.
+- **AI budget.** Paid AI calls are capped per client address per UTC day (`AI_DAILY_PER_IP`, default 20) and for the whole site (`AI_DAILY_TOTAL`, default 250). A client over its limit is refused before the site budget is touched. Answers are cached (the same document, or the same question over the same records), and cached answers cost nothing, so repeated runs of the live demo use almost no AI credit. Past a limit the site falls back to stored sample readings or plain facts from the chain, and says why.
 
 ## Run it locally
 

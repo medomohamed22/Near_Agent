@@ -81,6 +81,8 @@ export type AskResponse = {
   citations: number[];
   unknowns: string[];
   source: "live" | "offline";
+  /** Why the answer is not from the AI, when there is a specific reason (such as the daily limit). */
+  note?: string;
 };
 
 export type RelayResponse = { ok: true; txHash: string; result: unknown } | { ok: false; error: string };

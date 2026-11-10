@@ -1,6 +1,7 @@
 import samples from "@/lib/samples.json";
 import type { ExtractResponse, Extraction, RecordKind } from "@/lib/types";
 import { aiConfigured, extractDocument } from "@/lib/server/ai";
+import { budgetNote, cached, remember, spendAi } from "@/lib/server/ai-budget";
 import { allow, tooLarge, tooMany } from "@/lib/server/ratelimit";
 import { readUpload } from "@/lib/server/upload";
 
@@ -27,14 +28,24 @@ export async function POST(request: Request) {
   if (typeof upload === "string") return Response.json({ error: upload }, { status: 400 });
   const lang = form.get("lang") === "ar" ? "ar" : "en";
 
+  // The same document read before is served from the cache and costs nothing.
+  const hit = await cached<Extraction>("extract", upload.sha256, lang);
+  if (hit) return Response.json({ sha256: upload.sha256, extraction: hit, source: "live" } satisfies ExtractResponse);
+
   let failure = "";
   if (aiConfigured()) {
-    try {
-      const extraction = await extractDocument(upload.bytes, upload.mime, lang);
-      return Response.json({ sha256: upload.sha256, extraction, source: "live" } satisfies ExtractResponse);
-    } catch (e) {
-      console.error("extract failed", e);
-      failure = "The AI service did not answer.";
+    const allowance = await spendAi(request);
+    if (allowance.ok) {
+      try {
+        const extraction = await extractDocument(upload.bytes, upload.mime, lang);
+        await remember("extract", upload.sha256, lang, extraction);
+        return Response.json({ sha256: upload.sha256, extraction, source: "live" } satisfies ExtractResponse);
+      } catch (e) {
+        console.error("extract failed", e);
+        failure = "The AI service did not answer.";
+      }
+    } else {
+      failure = budgetNote(allowance.reason);
     }
   } else {
     failure = "The AI service is not configured on this deployment.";

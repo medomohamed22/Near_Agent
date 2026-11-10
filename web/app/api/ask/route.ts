@@ -2,7 +2,9 @@ import { z } from "zod";
 import { getRecords } from "@/lib/chain";
 import { CONTRACT_ID } from "@/lib/config";
 import type { AskResponse, Extraction } from "@/lib/types";
+import { sha256Hex } from "@/lib/hash";
 import { aiConfigured, askRecords, offlineAnswer, type RecordContext } from "@/lib/server/ai";
+import { budgetNote, cached, remember, spendAi } from "@/lib/server/ai-budget";
 import { allow, tooLarge, tooMany } from "@/lib/server/ratelimit";
 import { supabase } from "@/lib/server/supabase";
 
@@ -37,16 +39,30 @@ export async function POST(request: Request) {
     return { record, extraction: agrees ? x : null };
   });
 
+  // The same question over the same records is answered from the cache.
+  const key = await sha256Hex(JSON.stringify({
+    q: question.toLowerCase().replace(/\s+/g, " "),
+    records: context.map(({ record: r, extraction: x }) => [r.index, r.kind, r.doc_hash, r.event_date, r.odometer_km, r.added_by, r.attested_by, r.odometer_conflict, x?.summary ?? null, x?.provider_name ?? null]),
+  }));
+  const hit = await cached<AskResponse>("ask", key, lang);
+  if (hit) return Response.json(hit);
+
   let body: AskResponse;
-  if (aiConfigured()) {
-    try {
-      body = await askRecords(question, context, lang);
-    } catch (e) {
-      console.error("ask failed", e);
-      body = offlineAnswer(context, lang);
-    }
-  } else {
+  if (!aiConfigured()) {
     body = offlineAnswer(context, lang);
+  } else {
+    const allowance = await spendAi(request);
+    if (!allowance.ok) {
+      body = { ...offlineAnswer(context, lang), note: budgetNote(allowance.reason) };
+    } else {
+      try {
+        body = await askRecords(question, context, lang);
+        await remember("ask", key, lang, body);
+      } catch (e) {
+        console.error("ask failed", e);
+        body = offlineAnswer(context, lang);
+      }
+    }
   }
   return Response.json(body);
 }

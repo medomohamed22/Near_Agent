@@ -120,6 +120,7 @@ export default function AddRecord({ t, lang, vehicleId, records, allowed, onSubm
                   <h3 className="font-semibold">{t("review")}</h3>
                   <span className={`badge ${read.source === "live" ? "badge-ok" : "badge-warn"}`}>{t(`src_${read.source}` as Key)}</span>
                 </div>
+                {read.note && read.source !== "live" && <p className="mt-1 text-xs text-warn">{read.note}</p>}
                 {read.extraction.warnings.length > 0 && (
                   <div className="mt-2"><Notice tone="warn">{t("aiWarnings")}: {read.extraction.warnings.join(" · ")}</Notice></div>
                 )}
