@@ -1,7 +1,7 @@
 "use client";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { ContactShadows, Environment, Lightformer, OrbitControls } from "@react-three/drei";
-import { useMemo, useRef, useState, type RefObject } from "react";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { ExtrudeGeometry, Shape, Vector3, type Group } from "three";
 import type { RecordKind } from "@/lib/types";
 
@@ -141,9 +141,20 @@ export default function Car3D({ zones, active, onPick, dark }: Props) {
   const [still] = useState(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   const markers = useRef<(HTMLButtonElement | null)[]>([]);
   const rig = useRef<Group>(null);
+  const box = useRef<HTMLDivElement>(null);
+  // Draw only while the car is on screen; an off-screen turntable would keep
+  // the graphics chip busy for nothing.
+  const [visible, setVisible] = useState(true);
+  useEffect(() => {
+    const el = box.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting), { rootMargin: "120px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
   return (
-    <div className="relative h-full w-full" dir="ltr">
-      <Canvas shadows camera={{ position: [6.0, 2.7, 6.6], fov: 30 }} dpr={[1, 2]} onPointerMissed={() => onPick(null)}>
+    <div ref={box} className="relative h-full w-full" dir="ltr">
+      <Canvas frameloop={visible ? "always" : "never"} shadows camera={{ position: [6.0, 2.7, 6.6], fov: 30 }} dpr={[1, 2]} onPointerMissed={() => onPick(null)}>
         <ambientLight intensity={dark ? 0.45 : 0.9} />
         <directionalLight position={[4, 7, 5]} intensity={dark ? 1.3 : 1.9} castShadow shadow-mapSize={[1024, 1024]} />
         <directionalLight position={[-6, 3, -4]} intensity={0.6} color="#8b7dff" />
