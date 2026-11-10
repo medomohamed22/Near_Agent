@@ -11,6 +11,15 @@ export const aiModel = () => MODEL;
 
 type Part = { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
 
+/** Text of a completion message, whether the API sends a string or a list of parts. */
+function messageText(content: unknown): string {
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    return content.map((part) => (typeof part === "string" ? part : typeof part?.text === "string" ? part.text : "")).join("");
+  }
+  return "";
+}
+
 /** One chat completion on the Meta Model API (OpenAI-compatible). The model gets no tools. */
 async function chat(system: string, user: string | Part[]): Promise<string> {
   const res = await fetch(`${BASE_URL}/chat/completions`, {
@@ -20,15 +29,18 @@ async function chat(system: string, user: string | Part[]): Promise<string> {
       model: MODEL,
       stream: false,
       temperature: 0,
-      max_tokens: 1200,
+      // Room for the model's own reasoning as well as the short JSON answer;
+      // a tight limit can be used up before any answer is written.
+      max_tokens: 8000,
       messages: [{ role: "system", content: system }, { role: "user", content: user }],
     }),
-    signal: AbortSignal.timeout(45_000),
+    signal: AbortSignal.timeout(55_000),
   });
   if (!res.ok) throw new Error(`The AI service answered ${res.status}`);
   const body = await res.json();
-  const text = body?.choices?.[0]?.message?.content;
-  if (typeof text !== "string" || !text.trim()) throw new Error("The AI service returned no text");
+  const choice = body?.choices?.[0];
+  const text = messageText(choice?.message?.content);
+  if (!text.trim()) throw new Error(`The AI service returned no text (finish_reason: ${choice?.finish_reason ?? "unknown"})`);
   return text;
 }
 
