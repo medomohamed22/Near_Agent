@@ -52,8 +52,8 @@ A two-minute tour:
 | | |
 |---|---|
 | Network | NEAR testnet |
-| Contract | [`carpass-v3.testnet`](https://testnet.nearblocks.io/address/carpass-v3.testnet) |
-| Deploy | [`EtcbL2eD…`](https://testnet.nearblocks.io/txns/EtcbL2eDzkzC2GW1AUyBKBi9uFtgB6r33CLqMWHYXHzA) |
+| Contract | [`carpass-v4.testnet`](https://testnet.nearblocks.io/address/carpass-v4.testnet) |
+| Deploy | [`FdAfZk7f…`](https://testnet.nearblocks.io/txns/FdAfZk7feLmA9Ufb4ncHjgVGpKzJfZs1dehHj3ixCLmP) |
 
 The contract stores document hashes, dates, odometer readings, account ids and sale state. It never stores a VIN (only a salted hash), a name, a file or any other personal data.
 

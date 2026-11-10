@@ -1,6 +1,6 @@
 /** CarPass runs on NEAR testnet only. Nothing here can point at mainnet. */
 export const NETWORK = "testnet" as const;
-export const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID || "carpass-v3.testnet";
+export const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID || "carpass-v4.testnet";
 export const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || "https://rpc.testnet.fastnear.com";
 export const EXPLORER = "https://testnet.nearblocks.io";
 
