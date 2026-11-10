@@ -7,3 +7,4 @@ target/
 .vercel
 *.log
 scripts/.keys.json
+video-out/
