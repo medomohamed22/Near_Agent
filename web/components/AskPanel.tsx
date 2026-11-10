@@ -30,7 +30,7 @@ export default function AskPanel({ t, lang, vehicleId, onCite }: Props) {
   };
 
   return (
-    <section className="card" aria-labelledby="ask-h">
+    <section className="card reveal" style={{ "--i": 3 } as React.CSSProperties} aria-labelledby="ask-h">
       <h2 id="ask-h" className="h2">{t("ask")}</h2>
       <p className="mt-1 text-sm muted">{t("askHint")}</p>
       <form className="mt-3 flex gap-2" onSubmit={(e) => { e.preventDefault(); ask(question); }}>
@@ -47,7 +47,7 @@ export default function AskPanel({ t, lang, vehicleId, onCite }: Props) {
         {busy && <p className="text-sm muted">{t("asking")}</p>}
         {error && <Notice tone="danger">{error}</Notice>}
         {reply && (
-          <div className="card-2">
+          <div className="card-2 pop">
             {reply.source === "offline" && <p className="mb-2"><span className="badge badge-warn">{t("offline")}</span></p>}
             <p>{reply.answer}</p>
             {reply.citations.length > 0 && (

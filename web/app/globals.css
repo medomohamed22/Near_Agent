@@ -1,28 +1,66 @@
 @import "tailwindcss";
 
+/* Light is the default theme. Dark is opt-in through the header toggle. */
 :root {
-  --bg: #0b1220;
-  --surface: #121b2e;
-  --surface-2: #18233b;
-  --line: #26334f;
-  --text: #e8eef9;
-  --muted: #9aa8c2;
-  --brand: #2dd4bf;
-  --brand-ink: #04211d;
+  --bg: #f4f5fb;
+  --blob-1: rgba(124, 92, 255, 0.2);
+  --blob-2: rgba(45, 196, 255, 0.18);
+  --blob-3: rgba(255, 153, 102, 0.14);
+  --surface: rgba(255, 255, 255, 0.82);
+  --surface-solid: #ffffff;
+  --surface-2: #f2f3fa;
+  --line: #e3e5f0;
+  --text: #10132a;
+  --muted: #5d6381;
+  --brand: #5b4bff;
+  --brand-2: #8b5cf6;
+  --brand-text: #4a3aee;
+  --brand-soft: rgba(91, 75, 255, 0.09);
+  --ok: #0b7a45;
+  --warn: #9a5800;
+  --danger: #c0242c;
+  --focus: #5b4bff;
+  --shadow: 0 1px 2px rgba(16, 19, 42, 0.04), 0 12px 32px -12px rgba(16, 19, 42, 0.14);
+  --shadow-lift: 0 2px 4px rgba(16, 19, 42, 0.05), 0 24px 48px -16px rgba(72, 56, 220, 0.26);
+  --stage-top: #eceeff;
+  --stage-bottom: #fbfbff;
+  --stage-floor: #dfe2f5;
+}
+
+:root[data-theme="dark"] {
+  --bg: #090b16;
+  --blob-1: rgba(124, 92, 255, 0.22);
+  --blob-2: rgba(34, 211, 238, 0.12);
+  --blob-3: rgba(244, 114, 182, 0.08);
+  --surface: rgba(20, 24, 44, 0.78);
+  --surface-solid: #14182c;
+  --surface-2: #1b2039;
+  --line: #2a3050;
+  --text: #ebeefa;
+  --muted: #9ca4c4;
+  --brand: #6d5dff;
+  --brand-2: #a78bfa;
+  --brand-text: #b3b9ff;
+  --brand-soft: rgba(139, 125, 255, 0.14);
   --ok: #4ade80;
   --warn: #fbbf24;
   --danger: #f87171;
   --focus: #c4b5fd;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 16px 40px -16px rgba(0, 0, 0, 0.6);
+  --shadow-lift: 0 2px 4px rgba(0, 0, 0, 0.3), 0 28px 56px -18px rgba(109, 93, 255, 0.4);
+  --stage-top: #151a36;
+  --stage-bottom: #0b0e1c;
+  --stage-floor: #1d2344;
 }
 
 @theme inline {
   --color-bg: var(--bg);
-  --color-surface: var(--surface);
+  --color-surface: var(--surface-solid);
   --color-surface-2: var(--surface-2);
   --color-line: var(--line);
   --color-ink: var(--text);
   --color-muted: var(--muted);
-  --color-brand: var(--brand);
+  --color-brand: var(--brand-text);
   --color-ok: var(--ok);
   --color-warn: var(--warn);
   --color-danger: var(--danger);
@@ -30,85 +68,174 @@
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-html { color-scheme: dark; }
+html { color-scheme: light; scroll-behavior: smooth; overflow-x: clip; }
+html[data-theme="dark"] { color-scheme: dark; }
 html[lang="ar"] body { font-family: var(--font-arabic), var(--font-inter), system-ui, sans-serif; }
+
 body {
-  background:
-    radial-gradient(1100px 520px at 85% -10%, rgba(45, 212, 191, 0.13), transparent 60%),
-    radial-gradient(900px 480px at -10% 10%, rgba(99, 102, 241, 0.12), transparent 60%),
-    var(--bg);
-  background-attachment: fixed;
+  background: var(--bg);
   color: var(--text);
   font-family: var(--font-sans);
   line-height: 1.6;
+  transition: background-color 0.4s ease, color 0.4s ease;
 }
 
-:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+/* Soft colour fields that drift slowly behind the page. */
+.backdrop { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.backdrop i { position: absolute; border-radius: 50%; filter: blur(70px); will-change: transform; }
+.backdrop i:nth-child(1) { width: 46vw; height: 46vw; top: -14vw; inset-inline-end: -8vw; background: var(--blob-1); animation: drift 22s ease-in-out infinite; }
+.backdrop i:nth-child(2) { width: 40vw; height: 40vw; top: 12vw; inset-inline-start: -14vw; background: var(--blob-2); animation: drift 28s ease-in-out infinite reverse; }
+.backdrop i:nth-child(3) { width: 34vw; height: 34vw; top: 60vh; inset-inline-end: 12vw; background: var(--blob-3); animation: drift 34s ease-in-out infinite; }
+@keyframes drift { 0%, 100% { transform: translate3d(0, 0, 0) scale(1); } 50% { transform: translate3d(-3vw, 4vw, 0) scale(1.12); } }
 
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 20px; }
-.card-2 { background: var(--surface-2); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
-.h2 { font-size: 1.125rem; font-weight: 700; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 8px; }
+::selection { background: var(--brand); color: #fff; }
+
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 22px;
+  box-shadow: var(--shadow); backdrop-filter: blur(14px) saturate(1.2);
+  transition: box-shadow 0.3s ease, border-color 0.3s ease, background-color 0.4s ease;
+}
+.card-2 {
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 16px; padding: 14px;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease, background-color 0.4s ease;
+}
+li.card-2:hover { transform: translateY(-2px); box-shadow: var(--shadow); border-color: color-mix(in srgb, var(--brand) 35%, var(--line)); }
+.h2 { font-size: 1.125rem; font-weight: 700; letter-spacing: -0.01em; }
 .muted { color: var(--muted); }
 .ltr { direction: ltr; unicode-bidi: isolate; font-family: var(--font-mono); font-size: 0.8125rem; overflow-wrap: anywhere; }
+.gradient-text { background: linear-gradient(100deg, var(--brand), var(--brand-2) 55%, #22b8cf); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
 .btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px; overflow: hidden;
   min-height: 40px; padding: 8px 16px; border-radius: 12px; border: 1px solid var(--line);
-  background: var(--surface-2); color: var(--text); font-weight: 600; font-size: 0.9375rem;
-  cursor: pointer; transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  background: var(--surface-solid); color: var(--text); font-weight: 600; font-size: 0.9375rem; cursor: pointer;
+  transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
 }
-.btn:hover:not(:disabled) { border-color: var(--brand); }
-.btn:active:not(:disabled) { transform: translateY(1px); }
+.btn:hover:not(:disabled) { border-color: var(--brand); transform: translateY(-1px); box-shadow: var(--shadow); }
+.btn:active:not(:disabled) { transform: translateY(0) scale(0.97); }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn-primary { background: var(--brand); color: var(--brand-ink); border-color: var(--brand); }
-.btn-primary:hover:not(:disabled) { background: #5eead4; }
-.btn-danger { border-color: rgba(248, 113, 113, 0.5); color: var(--danger); }
-.btn-sm { min-height: 32px; padding: 4px 12px; font-size: 0.8125rem; border-radius: 10px; }
+.btn-primary {
+  border-color: transparent; color: #fff;
+  background: linear-gradient(120deg, var(--brand), var(--brand-2));
+  box-shadow: 0 8px 20px -8px color-mix(in srgb, var(--brand) 70%, transparent);
+}
+.btn-primary::after {
+  content: ""; position: absolute; inset: 0; transform: translateX(-120%);
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
+  transition: transform 0.6s ease;
+}
+.btn-primary:hover:not(:disabled)::after { transform: translateX(120%); }
+.btn-primary:hover:not(:disabled) { box-shadow: 0 12px 26px -8px color-mix(in srgb, var(--brand) 80%, transparent); border-color: transparent; }
+.btn-danger { border-color: color-mix(in srgb, var(--danger) 45%, transparent); color: var(--danger); }
+.btn-sm { min-height: 34px; padding: 4px 12px; font-size: 0.8125rem; border-radius: 10px; }
+.btn-round { width: 38px; min-height: 38px; padding: 0; border-radius: 999px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.03em; }
 
 .input {
-  width: 100%; min-height: 40px; padding: 8px 12px; border-radius: 10px;
-  background: var(--bg); border: 1px solid var(--line); color: var(--text); font: inherit;
+  width: 100%; min-height: 42px; padding: 8px 12px; border-radius: 12px;
+  background: var(--surface-solid); border: 1px solid var(--line); color: var(--text); font: inherit;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.4s ease;
 }
-.input:focus { border-color: var(--brand); }
+.input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 4px var(--brand-soft); }
 .label { display: block; font-size: 0.8125rem; color: var(--muted); margin-bottom: 4px; }
 
 .badge {
   display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px;
   font-size: 0.75rem; font-weight: 600; border: 1px solid var(--line); background: var(--surface-2); white-space: nowrap;
 }
-.badge-ok { color: var(--ok); border-color: rgba(74, 222, 128, 0.4); background: rgba(74, 222, 128, 0.08); }
-.badge-warn { color: var(--warn); border-color: rgba(251, 191, 36, 0.4); background: rgba(251, 191, 36, 0.08); }
-.badge-danger { color: var(--danger); border-color: rgba(248, 113, 113, 0.45); background: rgba(248, 113, 113, 0.08); }
-.badge-brand { color: var(--brand); border-color: rgba(45, 212, 191, 0.4); background: rgba(45, 212, 191, 0.08); }
+.badge-ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 35%, transparent); background: color-mix(in srgb, var(--ok) 9%, transparent); }
+.badge-warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 40%, transparent); background: color-mix(in srgb, var(--warn) 10%, transparent); }
+.badge-danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, transparent); background: color-mix(in srgb, var(--danger) 9%, transparent); }
+.badge-brand { color: var(--brand-text); border-color: color-mix(in srgb, var(--brand) 35%, transparent); background: var(--brand-soft); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 0 currentColor; animation: pulse 2s ease-out infinite; }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 55%, transparent); } 100% { box-shadow: 0 0 0 9px transparent; } }
+
+.bar { height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.bar > i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--brand), var(--brand-2)); transform-origin: left; animation: grow 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both; transition: width 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
+[dir="rtl"] .bar > i { transform-origin: right; }
+@keyframes grow { from { transform: scaleX(0); } }
 
 .spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid currentColor; border-top-color: transparent; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* 3D passport card */
-.scene { perspective: 1200px; }
-.passport {
-  position: relative; width: 100%; aspect-ratio: 1.58; transform-style: preserve-3d;
-  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); animation: float 7s ease-in-out infinite;
-  cursor: pointer; border: 0; background: none; padding: 0; color: inherit; text-align: start; display: block;
-}
-.passport.flipped { animation: none; }
-.passport-face {
-  position: absolute; inset: 0; border-radius: 20px; padding: 22px; backface-visibility: hidden; overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: linear-gradient(135deg, #0f766e 0%, #134e4a 38%, #1e1b4b 100%);
-  box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.18);
-}
-.passport-face::after {
-  content: ""; position: absolute; inset: 0; pointer-events: none;
-  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.16) 45%, transparent 60%);
-  transform: translateX(var(--shine, -40%));
-}
-.passport-back { transform: rotateY(180deg); background: linear-gradient(135deg, #1e1b4b 0%, #172554 55%, #134e4a 100%); }
-@keyframes float { 0%, 100% { translate: 0 0; } 50% { translate: 0 -8px; } }
-
+/* Entrance: content rises into place; --i staggers siblings. */
+.reveal { animation: rise 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both; animation-delay: calc(var(--i, 0) * 70ms); }
+@keyframes rise { from { opacity: 0; transform: translateY(18px); } }
+.pop { animation: pop 0.35s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+@keyframes pop { from { opacity: 0; transform: scale(0.92); } }
+.slide-in { animation: slide 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes slide { from { opacity: 0; transform: translateX(16px); } }
+[dir="rtl"] .slide-in { animation-name: slide-rtl; }
+@keyframes slide-rtl { from { opacity: 0; transform: translateX(-16px); } }
 .flash { animation: flash 1.6s ease-out; }
 @keyframes flash { 0% { box-shadow: 0 0 0 3px var(--brand); } 100% { box-shadow: 0 0 0 0 transparent; } }
 
+.site-header {
+  position: sticky; top: 0; z-index: 40; margin-inline: -16px; padding: 12px 16px;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+/* Once the page scrolls, the bar gains a frosted backing that spans the full window width. */
+.site-header::before {
+  content: ""; position: absolute; z-index: -1; top: 0; bottom: 0; left: 50%; width: 100vw; transform: translateX(-50%);
+  background: color-mix(in srgb, var(--bg) 78%, transparent); backdrop-filter: blur(16px) saturate(1.3);
+  border-bottom: 1px solid var(--line); opacity: 0; transition: opacity 0.3s ease;
+}
+.site-header.scrolled::before { opacity: 1; }
+.logo { background: linear-gradient(135deg, var(--brand), var(--brand-2) 60%, #22b8cf); box-shadow: 0 8px 18px -8px var(--brand); transition: transform 0.4s cubic-bezier(0.2, 1.4, 0.4, 1); }
+.logo:hover { transform: rotate(-8deg) scale(1.06); }
+.theme-icon { display: inline-block; animation: turn 0.5s cubic-bezier(0.2, 1.4, 0.4, 1); }
+@keyframes turn { from { transform: rotate(-90deg) scale(0.5); opacity: 0; } }
+
+.stage { background: radial-gradient(120% 90% at 50% 0%, var(--stage-top), var(--stage-bottom)); transition: background 0.4s ease; }
+.marker {
+  position: absolute; left: 0; top: 0; display: flex; align-items: center; gap: 6px; white-space: nowrap;
+  padding: 4px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; cursor: pointer; will-change: transform;
+  background: color-mix(in srgb, var(--surface-solid) 88%, transparent); color: var(--text); border: 1px solid var(--line);
+  box-shadow: var(--shadow); backdrop-filter: blur(8px); transition: background-color 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+.marker:hover { border-color: var(--brand); }
+.marker[aria-pressed="true"] { background: linear-gradient(120deg, var(--brand), var(--brand-2)); color: #fff; border-color: transparent; }
+.marker.alert { border-color: color-mix(in srgb, var(--warn) 60%, transparent); color: var(--warn); }
+.marker b { display: grid; place-items: center; min-width: 20px; height: 20px; padding: 0 4px; border-radius: 999px; font-size: 11px; background: color-mix(in srgb, currentColor 14%, transparent); }
+
+/* 3D passport */
+.scene { perspective: 1400px; }
+.passport {
+  position: relative; display: block; width: 100%; aspect-ratio: 1.58; padding: 0; border: 0; background: none; color: #fff; text-align: start; cursor: pointer;
+  transform-style: preserve-3d; transition: transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1); animation: float 7s ease-in-out infinite;
+}
+.passport.flipped { animation: none; }
+.passport-face {
+  position: absolute; inset: 0; border-radius: 22px; padding: 22px; overflow: hidden; backface-visibility: hidden; transform-style: preserve-3d;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgba(34, 211, 238, 0.55), transparent 55%),
+    radial-gradient(90% 90% at 100% 100%, rgba(244, 114, 182, 0.45), transparent 55%),
+    linear-gradient(135deg, #3b2fd6 0%, #5b4bff 42%, #7c3aed 100%);
+  box-shadow: 0 34px 60px -24px rgba(59, 47, 214, 0.65), 0 2px 0 rgba(255, 255, 255, 0.25) inset, 0 -8px 24px rgba(0, 0, 0, 0.18) inset;
+}
+/* Fine engraved lines, like the security print on a document. */
+.passport-face::before {
+  content: ""; position: absolute; inset: 0; opacity: 0.22; pointer-events: none;
+  background-image:
+    repeating-radial-gradient(circle at 85% 15%, transparent 0 9px, rgba(255, 255, 255, 0.55) 9px 10px),
+    repeating-linear-gradient(115deg, transparent 0 13px, rgba(255, 255, 255, 0.18) 13px 14px);
+  mask-image: linear-gradient(120deg, #000 10%, transparent 75%);
+}
+/* Holographic sheen that follows the pointer. */
+.passport-face::after {
+  content: ""; position: absolute; inset: -40%; pointer-events: none; mix-blend-mode: soft-light;
+  background: conic-gradient(from calc(var(--hue, 0) * 1deg) at var(--gx, 50%) var(--gy, 50%), #ff7ab8, #ffe37a, #7affc8, #7ab8ff, #c77aff, #ff7ab8);
+  opacity: 0.55; filter: blur(22px);
+}
+.passport-back { transform: rotateY(180deg); background: radial-gradient(110% 90% at 100% 0%, rgba(34, 211, 238, 0.4), transparent 55%), linear-gradient(135deg, #1f1a5c 0%, #3b2fd6 60%, #5b4bff 100%); }
+.passport-layer { position: relative; z-index: 1; transform: translateZ(34px); }
+.passport-chip { width: 44px; height: 34px; border-radius: 8px; background: linear-gradient(135deg, #ffe9a8, #d4a13a); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18); position: relative; }
+.passport-chip::before { content: ""; position: absolute; inset: 7px 0; border-block: 1px solid rgba(0, 0, 0, 0.28); }
+.passport-chip::after { content: ""; position: absolute; inset: 0 14px; border-inline: 1px solid rgba(0, 0, 0, 0.28); }
+.mrz { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em; opacity: 0.8; direction: ltr; white-space: nowrap; overflow: hidden; }
+@keyframes float { 0%, 100% { translate: 0 0; } 50% { translate: 0 -10px; } }
+
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition: none !important; }
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }

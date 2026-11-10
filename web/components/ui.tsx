@@ -33,5 +33,5 @@ export function Busy({ on, children }: { on: boolean; children: ReactNode }) {
 
 export function Notice({ tone = "info", children }: { tone?: "info" | "warn" | "danger" | "ok"; children: ReactNode }) {
   const cls = { info: "border-line text-muted", warn: "border-warn/40 text-warn", danger: "border-danger/50 text-danger", ok: "border-ok/40 text-ok" }[tone];
-  return <p role={tone === "danger" ? "alert" : "status"} className={`rounded-xl border bg-bg/40 px-3 py-2 text-sm ${cls}`}>{children}</p>;
+  return <p role={tone === "danger" ? "alert" : "status"} className={`pop rounded-xl border bg-surface-2 px-3 py-2 text-sm ${cls}`}>{children}</p>;
 }

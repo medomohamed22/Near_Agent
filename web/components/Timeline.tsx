@@ -21,8 +21,8 @@ type Props = {
 
 type Check = "idle" | "busy" | "match" | "mismatch" | "missing";
 
-function RecordCard({ t, vehicleId, record, doc, canAttest, onAttest, flash }: {
-  t: Props["t"]; vehicleId: number; record: CarRecord; doc?: Extraction; canAttest: boolean; onAttest: Props["onAttest"]; flash: boolean;
+function RecordCard({ t, vehicleId, record, doc, canAttest, onAttest, flash, order }: {
+  t: Props["t"]; vehicleId: number; order: number; record: CarRecord; doc?: Extraction; canAttest: boolean; onAttest: Props["onAttest"]; flash: boolean;
 }) {
   const [check, setCheck] = useState<Check>("idle");
   const [attesting, setAttesting] = useState(false);
@@ -42,7 +42,7 @@ function RecordCard({ t, vehicleId, record, doc, canAttest, onAttest, flash }: {
 
   const quotes = Object.entries(doc?.evidence ?? {}).filter(([, q]) => !!q);
   return (
-    <li id={`rec-${record.index}`} className={`card-2 ${flash ? "flash" : ""}`}>
+    <li id={`rec-${record.index}`} className={`card-2 reveal ${flash ? "flash" : ""}`} style={{ "--i": order } as React.CSSProperties}>
       <div className="flex flex-wrap items-center gap-2">
         <span className="ltr text-muted">#{record.index + 1}</span>
         <span className="badge badge-brand">{t(`kind_${record.kind}` as Key)}</span>
@@ -98,7 +98,7 @@ export default function Timeline({ t, vehicleId, records, docs, filter, onFilter
   const shown = records.filter((r) => !filter || filter.includes(r.kind)).sort((a, b) => b.event_date - a.event_date || b.index - a.index);
   const single = filter?.length === 1 ? filter[0] : null;
   return (
-    <section className="card" aria-labelledby="timeline-h">
+    <section className="card reveal" style={{ "--i": 3 } as React.CSSProperties} aria-labelledby="timeline-h">
       <div className="flex flex-wrap items-center gap-2">
         <h2 id="timeline-h" className="h2">{t("timeline")}</h2>
         <span className="grow" />
@@ -113,8 +113,8 @@ export default function Timeline({ t, vehicleId, records, docs, filter, onFilter
         <p className="mt-4 muted">{t("noRecords")}</p>
       ) : (
         <ol className="mt-4 space-y-3">
-          {shown.map((r) => (
-            <RecordCard key={r.index} t={t} vehicleId={vehicleId} record={r} doc={docs[r.doc_hash]} canAttest={canAttest} onAttest={onAttest} flash={flash === r.index} />
+          {shown.map((r, order) => (
+            <RecordCard key={r.index} order={order} t={t} vehicleId={vehicleId} record={r} doc={docs[r.doc_hash]} canAttest={canAttest} onAttest={onAttest} flash={flash === r.index} />
           ))}
         </ol>
       )}

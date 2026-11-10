@@ -2,7 +2,6 @@
 import QRCode from "qrcode";
 import { useEffect, useState } from "react";
 import { formatNear, parseNear } from "@/lib/chain";
-import type { Role } from "@/lib/config";
 import { sha256Hex } from "@/lib/hash";
 import type { Key } from "@/lib/i18n";
 import type { Sale, SaleStatus, SellerStats, Vehicle } from "@/lib/types";
@@ -13,10 +12,12 @@ type Props = {
   vehicle: Vehicle;
   sale: Sale | null;
   stats: SellerStats;
+  /** Who is acting, and what they may do. */
   me: string;
-  role: Role;
-  /** Runs a contract call and resolves when it is final. Errors are shown by the caller. */
-  act: (label: string, method: string, args: Record<string, unknown>) => Promise<void>;
+  canTrade: boolean;
+  isReviewer: boolean;
+  /** Runs a contract call and resolves when it is final. `deposit` is yoctoNEAR. Errors are shown by the caller. */
+  act: (label: string, method: string, args: Record<string, unknown>, deposit?: string) => Promise<void>;
 };
 
 const STEPS: SaleStatus[] = ["Listed", "Funded", "HandedOver", "Completed"];
@@ -35,11 +36,11 @@ function HandoverQr({ saleId, vehicleId, t }: { saleId: number; vehicleId: numbe
   const [src, setSrc] = useState("");
   useEffect(() => {
     const url = `${window.location.origin}/?v=${vehicleId}&confirm=${saleId}`;
-    QRCode.toDataURL(url, { margin: 1, width: 220, color: { dark: "#0b1220", light: "#ffffff" } }).then(setSrc).catch(() => setSrc(""));
+    QRCode.toDataURL(url, { margin: 1, width: 220, color: { dark: "#10132a", light: "#ffffff" } }).then(setSrc).catch(() => setSrc(""));
   }, [saleId, vehicleId]);
   if (!src) return null;
   return (
-    <div className="card-2 flex items-center gap-4">
+    <div className="card-2 pop flex items-center gap-4">
       {/* eslint-disable-next-line @next/next/no-img-element -- a generated data URL */}
       <img src={src} alt={t("qrTitle")} width={110} height={110} className="rounded-lg" />
       <div><div className="font-semibold">{t("qrTitle")}</div><p className="text-sm muted">{t("qrHint")}</p></div>
@@ -47,7 +48,7 @@ function HandoverQr({ saleId, vehicleId, t }: { saleId: number; vehicleId: numbe
   );
 }
 
-export default function SalePanel({ t, vehicle, sale, stats, me, role, act }: Props) {
+export default function SalePanel({ t, vehicle, sale, stats, me, canTrade, isReviewer, act }: Props) {
   const [price, setPrice] = useState("2");
   const [busy, setBusy] = useState("");
   const [disputing, setDisputing] = useState(false);
@@ -55,12 +56,12 @@ export default function SalePanel({ t, vehicle, sale, stats, me, role, act }: Pr
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const id = setInterval(() => setNow(Date.now()), 2000); return () => clearInterval(id); }, []);
 
-  const run = async (name: string, label: Key, method: string, args: Record<string, unknown>) => {
+  const run = async (name: string, label: Key, method: string, args: Record<string, unknown>, deposit?: string) => {
     setBusy(name);
-    await act(t(label), method, args).finally(() => setBusy(""));
+    await act(t(label), method, args, deposit).finally(() => setBusy(""));
   };
-  const Btn = (name: string, label: Key, method: string, args: Record<string, unknown>, cls = "btn-primary") => (
-    <button key={name} type="button" className={`btn ${cls}`} disabled={!!busy} onClick={() => run(name, label, method, args)}>
+  const Btn = (name: string, label: Key, method: string, args: Record<string, unknown>, cls = "btn-primary", deposit?: string) => (
+    <button key={name} type="button" className={`btn ${cls}`} disabled={!!busy} onClick={() => run(name, label, method, args, deposit)}>
       <Busy on={busy === name}>{t(label)}</Busy>
     </button>
   );
@@ -70,7 +71,6 @@ export default function SalePanel({ t, vehicle, sale, stats, me, role, act }: Pr
   const isSeller = sale?.seller === me;
   const isBuyer = sale?.buyer === me;
   const isParty = isSeller || isBuyer;
-  const canBuy = role !== "workshop" && role !== "reviewer";
   const timedOut = !!sale && sale.deadline_ms > 0 && now >= sale.deadline_ms;
 
   let priceError = "";
@@ -89,7 +89,7 @@ export default function SalePanel({ t, vehicle, sale, stats, me, role, act }: Pr
   const offTrack = sale && stepIndex < 0;
 
   return (
-    <section className="card" aria-labelledby="sale-h">
+    <section className="card reveal" style={{ "--i": 2 } as React.CSSProperties} aria-labelledby="sale-h">
       <div className="flex flex-wrap items-center gap-2">
         <h2 id="sale-h" className="h2">{t("sale")}</h2>
         {sale && <span className={`badge ${sale.status === "Disputed" ? "badge-danger" : sale.status === "Completed" ? "badge-ok" : offTrack ? "badge-warn" : "badge-brand"}`}>{t(`st_${sale.status}` as Key)}</span>}
@@ -104,7 +104,7 @@ export default function SalePanel({ t, vehicle, sale, stats, me, role, act }: Pr
               const done = !offTrack && i <= stepIndex;
               return (
                 <li key={s} aria-current={i === stepIndex ? "step" : undefined}>
-                  <div className={`h-1.5 rounded-full ${done ? "bg-brand" : "bg-line"}`} />
+                  <div className="bar"><i style={{ width: done ? "100%" : "0%" }} /></div>
                   <div className={`mt-1 text-xs ${done ? "text-ink" : "muted"}`}>{t(`st_${s}` as Key)}</div>
                 </li>
               );
@@ -125,7 +125,7 @@ export default function SalePanel({ t, vehicle, sale, stats, me, role, act }: Pr
       {open && sale && (
         <div className="mt-3 space-y-3">
           <div className="flex flex-wrap gap-2">
-            {sale.status === "Listed" && !isSeller && canBuy && Btn("fund", "fund", "fund_sale", { sale_id: sale.id })}
+            {sale.status === "Listed" && !isSeller && canTrade && Btn("fund", "fund", "fund_sale", { sale_id: sale.id }, "btn-primary", sale.price)}
             {sale.status === "Listed" && isSeller && Btn("withdraw", "withdraw", "cancel_sale", { sale_id: sale.id }, "")}
             {sale.status === "Funded" && isSeller && Btn("hand", "handOver", "mark_handed_over", { sale_id: sale.id })}
             {["Funded", "HandedOver"].includes(sale.status) && isBuyer && Btn("confirm", "confirm", "confirm_receipt", { sale_id: sale.id })}
@@ -134,7 +134,7 @@ export default function SalePanel({ t, vehicle, sale, stats, me, role, act }: Pr
             {["Funded", "HandedOver"].includes(sale.status) && isParty && (
               <button type="button" className="btn btn-danger" disabled={!!busy} onClick={() => setDisputing((d) => !d)} aria-expanded={disputing}>{t("dispute")}</button>
             )}
-            {sale.status === "Disputed" && role === "reviewer" && (
+            {sale.status === "Disputed" && isReviewer && (
               <>
                 {Btn("toSeller", "toSeller", "resolve_dispute", { sale_id: sale.id, release_to_seller: true })}
                 {Btn("toBuyer", "toBuyer", "resolve_dispute", { sale_id: sale.id, release_to_seller: false }, "")}
@@ -161,7 +161,7 @@ export default function SalePanel({ t, vehicle, sale, stats, me, role, act }: Pr
       {!open && (
         <div className="mt-3">
           {!sale && <p className="muted">{t("notForSale")}</p>}
-          {isHolder && role !== "workshop" && role !== "reviewer" && (
+          {isHolder && canTrade && (
             <form className="mt-3 flex flex-wrap items-end gap-2" onSubmit={(e) => { e.preventDefault(); if (!priceError) run("list", "list", "list_for_sale", { vehicle_id: vehicle.id, price: priceYocto }); }}>
               <div>
                 <label className="label" htmlFor="sale-price">{t("price")}</label>

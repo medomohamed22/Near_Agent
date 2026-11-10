@@ -16,7 +16,12 @@ Buying a used car means trusting a stack of loose invoices and an odometer that 
 
 ## Try it
 
-Open the demo and use **guest mode**: the bar at the top switches between four shared testnet accounts (seller, buyer, workshop, reviewer), so you can play both sides of a sale without a wallet.
+There are two ways in:
+
+- **Guest demo** (no wallet): the bar under the header switches between four shared testnet accounts (seller, buyer, workshop, reviewer), so you can play both sides of a sale.
+- **Your own wallet**: press *Connect wallet* and pick a wallet that supports NEAR testnet (Meteor, Intear, Nightly, Ledger and others). You then act as your own account: your passports, your listings, your purchases, each approved in your wallet.
+
+The page opens in English with a light theme. The round buttons in the header switch to Arabic (right-to-left) and to a dark theme; both choices are remembered.
 
 A two-minute tour:
 
@@ -37,7 +42,7 @@ A two-minute tour:
 | Document hashing and in-browser verification | Real |
 | Document storage | Real (Supabase private bucket, reachable only by the server) |
 | AI extraction and Q&A | Real when `META_MODEL_API_KEY` is set. Otherwise the header shows "AI on fallback": sample documents use stored readings, other uploads are filled in by hand, and Q&A returns plain facts from the chain. Fallbacks are always labelled. |
-| Accounts | Guest mode signs with shared demo accounts on the server. Connecting your own wallet is not built yet. |
+| Accounts | Your own NEAR testnet wallet (through NEAR Connect), or guest mode, which signs with shared demo accounts on the server. |
 | Workshops, cars, invoices | Fictional samples |
 | Dispute reviewer | A demo admin account. Its decision is not a legal ruling. |
 | Legal ownership, payments in real money, KYC | Out of scope |
@@ -98,13 +103,14 @@ A fixed formula over on-chain numbers, shown with its breakdown. It measures how
 ```mermaid
 flowchart LR
   B[Browser · Next.js] -- view calls --> C[(CarPass contract · NEAR testnet)]
+  B -- signs in the wallet --> W[NEAR testnet wallet] --> C
   B -- /api/relay --> R[Guest signer] --> C
   B -- /api/extract · /api/ask --> A[Meta Model API]
   B -- /api/documents --> S[(Supabase · private storage)]
 ```
 
 - `contract/` — Rust, `near-sdk` 5. Passports, records, attestations, escrowed sale. 49 unit tests.
-- `web/` — Next.js (App Router), TypeScript, Tailwind, React Three Fiber. English and Arabic (RTL).
+- `web/` — Next.js (App Router), TypeScript, Tailwind, React Three Fiber, NEAR Connect. English and Arabic (RTL), light and dark themes.
 - `scripts/` — deploy the contract, seed the demo, regenerate the sample documents.
 - `docs/PLAN.md` — the build plan (Arabic).
 
@@ -147,6 +153,7 @@ cd contract && cargo test
 
 ## Limits
 
+- Wallet signing was checked up to the wallet chooser; a full signed transaction from a real wallet has not been run in an automated test. With a wallet, a workshop or reviewer role applies only if the contract admin approved that account.
 - Guest accounts are shared, so visitors see each other's actions. The server signs only an allow-list of contract methods and decides deposits itself.
 - A dispute records only the hash of the complaint; the reviewer hears the parties off-chain.
 - Uploads are images (JPEG, PNG, WebP) up to 5 MB. Anyone viewing a passport can open its documents.

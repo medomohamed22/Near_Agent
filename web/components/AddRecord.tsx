@@ -86,7 +86,7 @@ export default function AddRecord({ t, lang, vehicleId, records, allowed, onSubm
     );
 
   return (
-    <section className="card" aria-labelledby="add-h">
+    <section className="card reveal" style={{ "--i": 4 } as React.CSSProperties} aria-labelledby="add-h">
       <h2 id="add-h" className="h2">{t("addRecord")}</h2>
       <p className="mt-1 text-sm muted">{t("addRecordHint")}</p>
       {!allowed ? (
@@ -111,7 +111,7 @@ export default function AddRecord({ t, lang, vehicleId, records, allowed, onSubm
           {phase === "reading" && <p className="mt-4 flex items-center gap-2 text-sm"><span className="spinner" aria-hidden />{t("reading")}</p>}
 
           {draft && read && (
-            <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,260px)_1fr]">
+            <div className="pop mt-4 grid gap-4 lg:grid-cols-[minmax(0,260px)_1fr]">
               {/* eslint-disable-next-line @next/next/no-img-element -- a local blob preview, not a remote asset */}
               <img src={preview} alt="" className="max-h-80 w-full rounded-xl border border-line object-contain bg-white" />
               <div>
